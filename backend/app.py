@@ -1,10 +1,13 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
 from config import TIDB_CONFIG
 from sqlalchemy import create_engine, text
 from mock_db import get_mock_database
 from log_parser.parser import LogParser
+import os
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 
 # Create TiDB connection
@@ -49,7 +52,15 @@ log_parser = LogParser()
 
 @app.route('/')
 def index():
-    return "Auto DevOps Assistant API is running"
+    """Serve the frontend HTML at root"""
+    frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend')
+    return send_from_directory(frontend_path, 'index.html')
+
+@app.route('/<path:filename>')
+def serve_static_files(filename):
+    """Serve static files (CSS, JS, images) from frontend directory"""
+    frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend')
+    return send_from_directory(frontend_path, filename)
 
 @app.route('/health')
 def health_check():
@@ -124,6 +135,21 @@ def upload_log():
             "error": "Failed to process log",
             "details": str(e)
         }), 500
+
+
+@app.route('/frontend')
+@app.route('/frontend/')
+def serve_frontend():
+    """Serve the frontend HTML"""
+    frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend')
+    return send_from_directory(frontend_path, 'index.html')
+
+
+@app.route('/frontend/<path:filename>')
+def serve_frontend_files(filename):
+    """Serve frontend static files"""
+    frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend')
+    return send_from_directory(frontend_path, filename)
 
 
 @app.route('/api/logs', methods=['GET'])

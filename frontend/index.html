@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto DevOps Assistant</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+            color: #1e293b;
+        }
+        
+        .main-container {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            box-shadow: 
+                0 4px 6px -1px rgba(0, 0, 0, 0.1),
+                0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            margin: 40px auto;
+            max-width: 1200px;
+        }
+        
+        .header-section {
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+            color: white;
+            padding: 40px 30px;
+            border-radius: 16px 16px 0 0;
+            text-align: center;
+        }
+        
+        .header-section h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        
+        .header-section p {
+            font-size: 1.1rem;
+            font-weight: 400;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+        
+        .upload-section {
+            padding: 40px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .upload-section h3 {
+            color: #1e293b;
+            font-weight: 600;
+            margin-bottom: 24px;
+            font-size: 1.5rem;
+        }
+        
+        .results-section {
+            padding: 40px;
+            background: #f8fafc;
+        }
+        
+        .results-section h3 {
+            color: #1e293b;
+            font-weight: 600;
+            margin-bottom: 24px;
+            font-size: 1.5rem;
+        }
+        
+        .log-textarea {
+            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+            font-size: 13px;
+            background: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 16px;
+            resize: vertical;
+            transition: all 0.2s ease;
+            line-height: 1.5;
+        }
+        
+        .log-textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .log-textarea::placeholder {
+            color: #64748b;
+        }
+        
+        .form-select {
+            background: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            color: #1e293b;
+            padding: 10px 12px;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+        
+        .form-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .form-label {
+            color: #374151;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.875rem;
+        }
+        
+        .analysis-card {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            transition: all 0.2s ease;
+        }
+        
+        .analysis-card:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .severity-error {
+            border-left: 4px solid #ef4444;
+        }
+        
+        .severity-warning {
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .severity-info {
+            border-left: 4px solid #06b6d4;
+        }
+        
+        .error-badge {
+            background: #ef4444;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .btn-analyze {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-weight: 600;
+            font-size: 1rem;
+            color: white;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .btn-analyze:hover {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        
+        .btn-analyze:active {
+            transform: translateY(0);
+        }
+        
+        .btn-analyze:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .btn-outline-secondary {
+            background: transparent;
+            border: 1px solid #d1d5db;
+            color: #6b7280;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-weight: 500;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .btn-outline-secondary:hover {
+            background: #f9fafb;
+            border-color: #9ca3af;
+            color: #374151;
+        }
+        
+        .loading-spinner {
+            display: none;
+            width: 16px;
+            height: 16px;
+        }
+        
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .status-healthy {
+            background: #10b981;
+        }
+        
+        .status-unhealthy {
+            background: #ef4444;
+        }
+        
+        .code-block {
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 12px;
+            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            color: #1e293b;
+            line-height: 1.5;
+        }
+        
+        .suggestion-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .priority-high {
+            border-left: 4px solid #ef4444;
+        }
+        
+        .priority-medium {
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .priority-low {
+            border-left: 4px solid #06b6d4;
+        }
+        
+        .copy-btn {
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            color: #6b7280;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .copy-btn:hover {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .header-section h1 {
+                font-size: 2rem;
+            }
+            .main-container {
+                margin: 20px;
+            }
+            .upload-section, .results-section {
+                padding: 20px;
+            }
+            .btn-outline-secondary {
+                margin-top: 8px;
+                display: block;
+                width: 100%;
+            }
+        }
+        
+        /* Clean notification styles */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-weight: 500;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            max-width: 300px;
+        }
+        
+        .notification-success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+        
+        .notification-error {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        
+        .notification-info {
+            background: #eff6ff;
+            color: #1e40af;
+            border: 1px solid #dbeafe;
+        }
+        
+        /* Loading Features */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .loading-content {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .loading-icon {
+            margin-bottom: 20px;
+        }
+        
+        .loading-icon .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            border-width: 0.3em;
+        }
+        
+        .loading-title {
+            color: #1e40af;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .loading-message {
+            color: #6b7280;
+            margin-bottom: 30px;
+        }
+        
+        .progress {
+            height: 8px;
+            border-radius: 10px;
+            background-color: #f3f4f6;
+        }
+        
+        .progress-bar {
+            border-radius: 10px;
+            background: linear-gradient(90deg, #3b82f6, #1e40af);
+            transition: width 0.5s ease;
+        }
+        
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #9ca3af;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .step.active {
+            color: #3b82f6;
+            transform: scale(1.1);
+        }
+        
+        .step.completed {
+            color: #10b981;
+        }
+        
+        .step i {
+            font-size: 16px;
+            margin-bottom: 5px;
+            padding: 8px;
+            border-radius: 50%;
+            background: #f3f4f6;
+            transition: all 0.3s ease;
+        }
+        
+        .step.active i {
+            background: #dbeafe;
+            color: #3b82f6;
+        }
+        
+        .step.completed i {
+            background: #d1fae5;
+            color: #10b981;
+        }
+        
+        /* Auto-detect Modal */
+        .auto-detect-animation {
+            position: relative;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .detection-spinner {
+            position: relative;
+        }
+        
+        .detection-spinner::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 50%;
+            animation: detectPulse 2s ease-in-out infinite;
+        }
+        
+        /* Button Loading States */
+        #analyzeBtn.loading {
+            pointer-events: none;
+            opacity: 0.8;
+        }
+        
+        #analyzeBtn.loading #analyzeIcon {
+            display: none;
+        }
+        
+        #analyzeBtn.loading #loadingSpinner {
+            display: inline-block !important;
+        }
+        
+        /* Animations */
+        @keyframes detectPulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes progressPulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.7;
+            }
+        }
+        
+        .progress-bar-animated {
+            animation: progressPulse 1.5s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="main-container">
+            <!-- Header -->
+            <div class="header-section">
+                <h1><i class="fas fa-robot me-3"></i>Auto DevOps Assistant</h1>
+                <p class="mb-0">AI-powered deployment log analysis and error fixing</p>
+                <div class="mt-3">
+                    <span class="status-indicator" id="statusIndicator"></span>
+                    <span id="statusText">Checking connection...</span>
+                </div>
+            </div>
+            
+            <!-- Upload Section -->
+            <div class="upload-section">
+                <h3><i class="fas fa-upload me-2"></i>Upload Deployment Log</h3>
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="mb-3">
+                            <label for="logContent" class="form-label">Paste your deployment log:</label>
+                            <textarea 
+                                class="form-control log-textarea" 
+                                id="logContent" 
+                                rows="10" 
+                                placeholder="ERROR: yaml.scanner.ScannerError: mapping values are not allowed here
+  in &quot;docker-compose.yml&quot;, line 5, column 13
+
+Or paste any deployment error log from:
+- Docker
+- Kubernetes  
+- CI/CD pipelines
+- Application logs"></textarea>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="logSource" class="form-label">Log Source:</label>
+                            <select class="form-select" id="logSource">
+                                <option value="unknown">Auto-detect</option>
+                                <option value="docker">Docker</option>
+                                <option value="kubernetes">Kubernetes</option>
+                                <option value="ci-cd">CI/CD Pipeline</option>
+                                <option value="application">Application</option>
+                            </select>
+                        </div>
+                        
+                        <button id="analyzeBtn" class="btn btn-analyze w-100" onclick="analyzeLog()">
+                            <span id="loadingSpinner" class="loading-spinner spinner-border spinner-border-sm me-2 d-none"></span>
+                            <i id="analyzeIcon" class="fas fa-search me-2"></i>
+                            <span id="analyzeText">Analyze Log</span>
+                        </button>
+                        
+                        <div class="mt-3">
+                            <button class="btn btn-outline-secondary btn-sm" onclick="loadSampleLog('yaml')">
+                                <i class="fas fa-file-code me-1"></i>Load YAML Error
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm ms-2" onclick="loadSampleLog('docker')">
+                                <i class="fab fa-docker me-1"></i>Load Docker Error
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Results Section -->
+            <div class="results-section" id="resultsSection" style="display: none;">
+                <h3><i class="fas fa-chart-line me-2"></i>Analysis Results</h3>
+                <div id="analysisResults"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay d-none">
+        <div class="loading-content">
+            <div class="loading-icon">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+            <h4 id="loadingTitle" class="loading-title">Analyzing Your Log</h4>
+            <p id="loadingMessage" class="loading-message">Please wait while we process your deployment log...</p>
+            <div class="loading-progress">
+                <div class="progress mb-3">
+                    <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" style="width: 0%"></div>
+                </div>
+                <div id="progressSteps" class="progress-steps">
+                    <div class="step" id="step1">
+                        <i class="fas fa-file-upload"></i>
+                        <span>Reading Log</span>
+                    </div>
+                    <div class="step" id="step2">
+                        <i class="fas fa-search"></i>
+                        <span>Detecting Issues</span>
+                    </div>
+                    <div class="step" id="step3">
+                        <i class="fas fa-brain"></i>
+                        <span>AI Analysis</span>
+                    </div>
+                    <div class="step" id="step4">
+                        <i class="fas fa-lightbulb"></i>
+                        <span>Generating Solutions</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auto-detect Log Type Modal -->
+    <div id="autoDetectModal" class="modal fade" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-magic me-2"></i>
+                        Auto-Detecting Log Type
+                    </h5>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="auto-detect-animation mb-3">
+                        <div class="detection-spinner">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Detecting...</span>
+                            </div>
+                        </div>
+                    </div>
+                    <h6 id="detectionMessage">Analyzing log patterns...</h6>
+                    <p class="text-muted small" id="detectionDetails">Scanning for error signatures and deployment patterns</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

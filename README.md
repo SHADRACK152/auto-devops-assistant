@@ -61,6 +61,44 @@ pip install -r requirements.txt
 
 3. Configure TiDB connection in `backend/config.py`
 
+## 🚀 Quick Start
+
+### Option 1: Direct Backend Start (Recommended)
+```bash
+# From the project root directory
+cd backend
+python app.py
+```
+
+### Option 2: Windows Batch File
+```bash
+# Double-click start.bat or run from command prompt:
+start.bat
+```
+
+### Option 3: Alternative Startup Scripts
+```bash
+# Using the run server script
+python run_server.py
+
+# Or the original startup script
+python start_server.py
+```
+
+## 📱 Access the Application
+
+Once the server is running, open your browser and navigate to:
+- **Frontend UI**: http://127.0.0.1:5000/
+- **API Health Check**: http://127.0.0.1:5000/health
+- **API Documentation**: http://127.0.0.1:5000/api/upload-log
+
+## 🎮 Demo Mode
+
+The application includes a demo mode that works without backend configuration:
+- Load sample error logs (YAML, Docker, Kubernetes)
+- See AI-powered analysis and fix suggestions
+- Perfect for hackathon demonstrations
+
 4. Run the Flask server:
 ```bash
 python app.py
@@ -96,6 +134,53 @@ This project is built for the TiDB AgentX Hackathon, showcasing:
 - **Multi-step AI Agents** for intelligent log analysis
 - **Real-world DevOps** problem solving
 
+## 🐛 Troubleshooting
+
+### Common Issues:
+
+**1. "No module named 'app'" or Import Errors**
+```bash
+# Use the direct backend approach instead:
+cd backend
+python app.py
+```
+
+**2. "python: can't open file 'start_server.py'"**
+```bash
+# Make sure you're in the project root directory
+cd auto-devops-assistant
+python start_server.py
+```
+
+**3. "ModuleNotFoundError: No module named 'flask'"**
+```bash
+# Install dependencies in the backend directory
+cd backend
+pip install -r requirements.txt
+```
+
+**4. "Port 5000 already in use"**
+```bash
+# Kill any process using port 5000
+netstat -ano | findstr :5000
+taskkill /PID <PID_NUMBER> /F
+```
+
+**5. TiDB Connection Issues**
+- Check your `backend/config.py` settings
+- Verify TiDB credentials and network connectivity
+- The app works in demo mode without TiDB
+
+**6. Frontend Not Loading**
+- Ensure you're accessing http://127.0.0.1:5000/ (not localhost)
+- Check browser console for JavaScript errors
+- Try refreshing the page
+
+### Getting Help:
+- Check the `/health` endpoint for server status
+- Review terminal output for error messages
+- Demo mode works offline for testing
+
 ---
 
-**Status**: 🚧 In Development - Backend Phase Complete
+**Status**: ✅ Ready for TiDB AgentX Hackathon - Professional UI Complete
