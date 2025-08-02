@@ -4,7 +4,9 @@ from config import TIDB_CONFIG
 from sqlalchemy import create_engine, text
 from mock_db import get_mock_database
 from log_parser.parser import LogParser
+from ai_service_v2 import ai_analyzer
 import os
+import asyncio
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -91,7 +93,7 @@ def health_check():
 
 @app.route('/api/upload-log', methods=['POST'])
 def upload_log():
-    """Endpoint to upload deployment logs for analysis"""
+    """Endpoint to upload deployment logs for AI-powered analysis"""
     try:
         data = request.get_json()
         
@@ -103,30 +105,42 @@ def upload_log():
         log_content = data['log_content']
         source = data.get('source', 'unknown')
         
-        # Parse the log content
-        parsed_log = log_parser.parse_log(log_content, source)
+        # Run AI-powered analysis
+        try:
+            # Direct call to AI analyzer (no async needed)
+            analysis_result = ai_analyzer.analyze_log(log_content, source)
+        except Exception as ai_error:
+            print(f"AI analysis failed: {ai_error}")
+            # Fallback to basic pattern analysis
+            parsed_log = log_parser.parse_log(log_content, source)
+            analysis_result = {
+                "log_id": "fallback_" + str(hash(log_content))[:8],
+                "severity": parsed_log['severity'],
+                "summary": parsed_log['summary'],
+                "errors_found": len(parsed_log['errors']),
+                "errors": parsed_log['errors'],
+                "ai_powered": False,
+                "fallback_analysis": True
+            }
         
+        # Store analysis results
         if use_mock_db:
-            # Store in mock database
             log_id = mock_db.add_log(
                 content=log_content,
                 source=source,
-                severity=parsed_log['severity'],
-                summary=parsed_log['summary']
+                severity=analysis_result['severity'],
+                summary=analysis_result['summary']
             )
+            analysis_result['log_id'] = log_id
         else:
             # TODO: Store in TiDB when connection is working
-            log_id = parsed_log['id']
+            pass
         
         return jsonify({
-            "message": "Log uploaded and analyzed successfully",
-            "log_id": log_id,
-            "analysis": {
-                "severity": parsed_log['severity'],
-                "errors_found": len(parsed_log['errors']),
-                "summary": parsed_log['summary'],
-                "errors": parsed_log['errors']
-            },
+            "message": "Log analyzed with AI-powered insights",
+            "log_id": analysis_result['log_id'],
+            "analysis": analysis_result,
+            "ai_powered": analysis_result.get('ai_powered', False),
             "database": "mock" if use_mock_db else "tidb"
         })
         
@@ -135,6 +149,137 @@ def upload_log():
             "error": "Failed to process log",
             "details": str(e)
         }), 500
+
+
+@app.route('/api/analyze-ai', methods=['POST'])
+def analyze_with_ai():
+    """Advanced AI-powered log analysis endpoint"""
+    try:
+        data = request.get_json()
+        
+        if not data or 'log_content' not in data:
+            return jsonify({
+                "error": "No log content provided",
+                "usage": "POST with JSON body containing 'log_content' field"
+            }), 400
+        
+        log_content = data['log_content']
+        source = data.get('source', 'auto-detect')
+        enable_ai = data.get('enable_ai', True)
+        
+        if not enable_ai:
+            # Run only pattern-based analysis
+            parsed_log = log_parser.parse_log(log_content, source)
+            return jsonify({
+                "message": "Pattern-based analysis completed",
+                "analysis": {
+                    "severity": parsed_log['severity'],
+                    "summary": parsed_log['summary'],
+                    "errors": parsed_log['errors'],
+                    "ai_powered": False,
+                    "analysis_type": "pattern_based"
+                }
+            })
+        
+        # Run full AI-powered analysis
+        try:
+            ai_result = ai_analyzer.analyze_log(log_content, source)
+            
+            return jsonify({
+                "message": "AI-powered analysis completed successfully",
+                "analysis": ai_result,
+                "ai_powered": ai_result.get('ai_powered', False),
+                "confidence": ai_result.get('confidence_score', 0.0)
+            })
+            
+        except Exception as ai_error:
+            # Graceful fallback to pattern analysis
+            print(f"AI analysis error: {ai_error}")
+            parsed_log = log_parser.parse_log(log_content, source)
+            
+            return jsonify({
+                "message": "Analysis completed with fallback method",
+                "analysis": {
+                    "severity": parsed_log['severity'],
+                    "summary": parsed_log['summary'],
+                    "errors": parsed_log['errors'],
+                    "ai_powered": False,
+                    "fallback_reason": str(ai_error),
+                    "analysis_type": "pattern_fallback"
+                }
+            })
+            
+    except Exception as e:
+        return jsonify({
+            "error": "Analysis failed",
+            "details": str(e)
+        }), 500
+
+
+@app.route('/api/ai-status', methods=['GET'])
+def ai_status():
+    """Check AI service availability and capabilities"""
+    try:
+        # Check if AI analyzer is available
+        ai_available = ai_analyzer.openai_available if ai_analyzer else False
+        
+        return jsonify({
+            "ai_available": ai_available,
+            "ai_service": "OpenAI GPT-3.5" if ai_available else "Pattern-based only",
+            "features": {
+                "pattern_recognition": True,
+                "ai_insights": ai_available,
+                "solution_generation": True,
+                "confidence_scoring": True,
+                "multi_source_analysis": True,
+                "self_learning": True
+            },
+            "supported_sources": [
+                "docker", "kubernetes", "yaml", "jenkins", 
+                "nginx", "application", "auto-detect"
+            ]
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "error": "Failed to check AI status",
+            "details": str(e)
+        }), 500
+
+
+@app.route('/api/feedback', methods=['POST'])
+def provide_feedback():
+    """Allow users to provide feedback on analysis accuracy"""
+    try:
+        data = request.get_json()
+        
+        if not data or 'log_id' not in data or 'pattern_type' not in data or 'helpful' not in data:
+            return jsonify({
+                "error": "Missing required fields: log_id, pattern_type, helpful"
+            }), 400
+        
+        log_id = data['log_id']
+        pattern_type = data['pattern_type']
+        helpful = data['helpful']
+        
+        result = ai_analyzer.provide_feedback(log_id, pattern_type, helpful)
+        
+        return jsonify({
+            "message": "Feedback recorded successfully",
+            "result": result
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/learning-stats', methods=['GET'])
+def get_learning_stats():
+    """Get AI learning and improvement statistics"""
+    try:
+        stats = ai_analyzer.get_learning_stats()
+        return jsonify(stats)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/frontend')
