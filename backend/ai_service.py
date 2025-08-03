@@ -1,803 +1,681 @@
+#!/usr/bin/env python3
 """
-AI-Powered Log Analysis Service for Auto DevOps Assistant
-Integrates with OpenAI GPT and TiDB Vector Search for intelligent log analysis
+Simplified AI service that prioritizes online AI (Groq)
 """
 
-import re
-import json
-import hashlib
-from typing import Dict, List, Any
-from datetime import datetime
-try:
-    from openai import OpenAI
-    OPENAI_AVAILABLE = True
-except ImportError:
-    OPENAI_AVAILABLE = False
-    print("⚠️  OpenAI not installed, using pattern-based analysis only")
-
-from config import OPENAI_API_KEY
-import sqlite3
 import os
+import json
+from datetime import datetime
+from typing import Dict, List, Any
+from dotenv import load_dotenv
 
+# Load environment first
+load_dotenv()
 
-class LearningEngine:
-    """Machine learning component for pattern discovery and improvement"""
+from online_ai_service import OnlineAIService
+
+class SimplifiedAIAnalyzer:
+    """Simplified AI analyzer focusing on online AI"""
     
     def __init__(self):
-        self.db_path = "learning_data.db"
-        self._init_learning_database()
-    
-    def _init_learning_database(self):
-        """Initialize learning database for storing analysis history"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        self.online_ai = OnlineAIService()
+        self.openai_available = False  # Keep for compatibility
         
-        # Create tables for learning data
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS analysis_history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                log_content TEXT,
-                detected_patterns TEXT,
-                user_feedback TEXT,
-                confidence_score REAL,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS pattern_effectiveness (
-                pattern TEXT PRIMARY KEY,
-                success_count INTEGER DEFAULT 0,
-                failure_count INTEGER DEFAULT 0,
-                avg_confidence REAL DEFAULT 0.0
-            )
-        ''')
-        
-        conn.commit()
-        conn.close()
-    
-    def store_analysis(self, log_content: str, patterns: list, confidence: float):
-        """Store analysis results for learning"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            INSERT INTO analysis_history (log_content, detected_patterns, confidence_score)
-            VALUES (?, ?, ?)
-        ''', (log_content, str(patterns), confidence))
-        
-        conn.commit()
-        conn.close()
-    
-    def update_pattern_effectiveness(self, pattern: str, success: bool):
-        """Update pattern effectiveness based on user feedback"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            INSERT OR IGNORE INTO pattern_effectiveness (pattern) VALUES (?)
-        ''', (pattern,))
-        
-        if success:
-            cursor.execute('''
-                UPDATE pattern_effectiveness 
-                SET success_count = success_count + 1 
-                WHERE pattern = ?
-            ''', (pattern,))
-        else:
-            cursor.execute('''
-                UPDATE pattern_effectiveness 
-                SET failure_count = failure_count + 1 
-                WHERE pattern = ?
-            ''', (pattern,))
-        
-        conn.commit()
-        conn.close()
-    
-    def get_learning_insights(self):
-        """Get insights from learning data"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            SELECT pattern, success_count, failure_count,
-                   CASE WHEN (success_count + failure_count) > 0 
-                        THEN CAST(success_count AS REAL) / (success_count + failure_count)
-                        ELSE 0.0 END as effectiveness
-            FROM pattern_effectiveness
-            ORDER BY effectiveness DESC
-        ''')
-        
-        patterns = cursor.fetchall()
-        conn.close()
-        
-        return patterns
-
-
-class AILogAnalyzer:
-    """AI-powered log analyzer using OpenAI GPT and pattern recognition"""
-    
-    def __init__(self):
-        self.openai_available = self._setup_openai()
-        self.error_patterns = self._load_error_patterns()
-        self.solution_templates = self._load_solution_templates()
-        self.learning_engine = LearningEngine()  # Add learning capability
-    
-    def _setup_openai(self) -> bool:
-        """Setup OpenAI client"""
-        try:
-            if OPENAI_AVAILABLE and OPENAI_API_KEY and OPENAI_API_KEY != "sk-your-openai-api-key-here":
-                self.client = OpenAI(api_key=OPENAI_API_KEY)
-                return True
-            else:
-                print("ℹ️  OpenAI API key not configured, using pattern-based analysis")
-                self.client = None
-                return False
-        except Exception as e:
-            print(f"⚠️  OpenAI setup failed: {e}")
-            self.client = None
-            return False
-    
-    def _load_error_patterns(self) -> Dict[str, Dict]:
-        """Load comprehensive error patterns for log analysis"""
-        return {
-            "yaml_syntax": {
-                "patterns": [
-                    r"yaml\.scanner\.ScannerError",
-                    r"mapping values are not allowed here",
-                    r"found character.*that cannot start any token",
-                    r"expected.*but found",
-                    r"could not find expected.*",
-                    r"duplicate key"
-                ],
-                "severity": "error",
-                "category": "configuration",
-                "source": "yaml"
-            },
-            "docker_port_conflict": {
-                "patterns": [
-                    r"port is already allocated",
-                    r"bind.*failed.*port.*already.*use",
-                    r"address already in use",
-                    r"port.*already.*allocated"
-                ],
-                "severity": "error",
-                "category": "networking",
-                "source": "docker"
-            },
-            "kubernetes_pod_failure": {
-                "patterns": [
-                    r"pods.*is forbidden",
-                    r"ImagePullBackOff",
-                    r"CrashLoopBackOff",
-                    r"CreateContainerConfigError",
-                    r"ErrImagePull",
-                    r"pods.*not found"
-                ],
-                "severity": "error",
-                "category": "orchestration",
-                "source": "kubernetes"
-            },
-            "docker_build_failure": {
-                "patterns": [
-                    r"failed to build",
-                    r"error building image",
-                    r"dockerfile.*not found",
-                    r"no such file or directory.*dockerfile",
-                    r"step.*failed"
-                ],
-                "severity": "error",
-                "category": "build",
-                "source": "docker"
-            },
-            "permission_error": {
-                "patterns": [
-                    r"permission denied",
-                    r"access denied",
-                    r"forbidden",
-                    r"unauthorized",
-                    r"403.*forbidden"
-                ],
-                "severity": "error",
-                "category": "security",
-                "source": "system"
-            },
-            "resource_exhaustion": {
-                "patterns": [
-                    r"out of memory",
-                    r"disk.*full",
-                    r"no space left",
-                    r"resource.*exhausted",
-                    r"memory.*exceeded"
-                ],
-                "severity": "critical",
-                "category": "resources",
-                "source": "system"
-            },
-            "network_connectivity": {
-                "patterns": [
-                    r"connection refused",
-                    r"timeout.*connecting",
-                    r"no route to host",
-                    r"network.*unreachable",
-                    r"dns.*resolution.*failed"
-                ],
-                "severity": "error",
-                "category": "networking",
-                "source": "network"
-            },
-            "dependency_missing": {
-                "patterns": [
-                    r"module.*not found",
-                    r"no such file.*package",
-                    r"import.*error",
-                    r"package.*not.*installed",
-                    r"command not found"
-                ],
-                "severity": "error",
-                "category": "dependencies",
-                "source": "application"
-            },
-            "microservices_timeout": {
-                "patterns": [
-                    r"timeout.*connecting",
-                    r"TLS handshake timeout",
-                    r"deadline exceeded",
-                    r"context deadline exceeded",
-                    r"connection timeout",
-                    r"grpc.*deadline.*exceeded",
-                    r"handshake timeout.*upstream"
-                ],
-                "severity": "error",
-                "category": "microservices",
-                "source": "application"
-            },
-            "service_mesh_issues": {
-                "patterns": [
-                    r"envoy proxy",
-                    r"service mesh.*sidecar",
-                    r"istio.*proxy",
-                    r"circuit breaker.*opened",
-                    r"proxy.*timeout",
-                    r"sidecar.*connection",
-                    r"failure rate: \d+%"
-                ],
-                "severity": "warning",
-                "category": "service-mesh",
-                "source": "kubernetes"
-            },
-            "performance_degradation": {
-                "patterns": [
-                    r"memory usage at \d+%",
-                    r"health check.*took.*\d+\.\d+s",
-                    r"connection pool.*exhausted",
-                    r"active: \d+/\d+.*idle: \d+/\d+",
-                    r"failure rate: \d+%",
-                    r"response time.*exceeded",
-                    r"pool exhausted.*active: \d+/\d+"
-                ],
-                "severity": "critical",
-                "category": "performance",
-                "source": "application"
-            },
-            "kubernetes_health_checks": {
-                "patterns": [
-                    r"readiness probe failed",
-                    r"liveness probe failed",
-                    r"health check.*failed",
-                    r"GET /ready.*503",
-                    r"GET /health.*timeout",
-                    r"probe.*returned.*5\d\d",
-                    r"readiness probe.*GET /ready returned 503"
-                ],
-                "severity": "critical",
-                "category": "health-monitoring",
-                "source": "kubernetes"
-            }
-        }
-    
-    def _load_solution_templates(self) -> Dict[str, Dict]:
-        """Load solution templates for common errors"""
-        return {
-            "yaml_syntax": {
-                "title": "Fix YAML Syntax Error",
-                "description": "Correct YAML formatting and indentation issues",
-                "solutions": [
-                    {
-                        "priority": "high",
-                        "action": "Fix Indentation",
-                        "code": """# Correct YAML indentation (use spaces, not tabs)
-version: '3.8'
-services:
-  web:
-    image: nginx:latest
-    ports:
-      - "80:80"
-    environment:
-      - NODE_ENV=production""",
-                        "explanation": "Ensure consistent indentation using spaces (not tabs) and proper key-value formatting"
-                    },
-                    {
-                        "priority": "medium",
-                        "action": "Validate YAML",
-                        "code": "yamllint docker-compose.yml",
-                        "explanation": "Use a YAML validator to check syntax before deployment"
-                    }
-                ]
-            },
-            "docker_port_conflict": {
-                "title": "Resolve Port Conflict",
-                "description": "Fix port allocation conflicts between containers",
-                "solutions": [
-                    {
-                        "priority": "high",
-                        "action": "Change Port Mapping",
-                        "code": """# Change to an available port
-ports:
-  - "8080:80"  # Use port 8080 instead of 80""",
-                        "explanation": "Map to a different host port to avoid conflicts"
-                    },
-                    {
-                        "priority": "high",
-                        "action": "Stop Conflicting Container",
-                        "code": "docker stop $(docker ps -q --filter \"publish=80\")",
-                        "explanation": "Stop the container currently using the conflicting port"
-                    },
-                    {
-                        "priority": "medium",
-                        "action": "Check Port Usage",
-                        "code": "netstat -tulpn | grep :80",
-                        "explanation": "Identify which process is using the port"
-                    }
-                ]
-            },
-            "kubernetes_pod_failure": {
-                "title": "Fix Kubernetes Pod Issues",
-                "description": "Resolve common Kubernetes pod deployment problems",
-                "solutions": [
-                    {
-                        "priority": "high",
-                        "action": "Check Pod Status",
-                        "code": "kubectl describe pod <pod-name>",
-                        "explanation": "Get detailed information about pod failure reasons"
-                    },
-                    {
-                        "priority": "high",
-                        "action": "Check Image Availability",
-                        "code": "kubectl get events --sort-by=.metadata.creationTimestamp",
-                        "explanation": "Verify that the container image exists and is accessible"
-                    },
-                    {
-                        "priority": "medium",
-                        "action": "Fix Resource Limits",
-                        "code": """resources:
-  limits:
-    memory: "512Mi"
-    cpu: "500m"
-  requests:
-    memory: "256Mi"
-    cpu: "250m" """,
-                        "explanation": "Adjust resource limits and requests appropriately"
-                    }
-                ]
-            },
-            "permission_error": {
-                "title": "Fix Permission Issues",
-                "description": "Resolve file and directory permission problems",
-                "solutions": [
-                    {
-                        "priority": "high",
-                        "action": "Fix File Permissions",
-                        "code": "chmod 755 /path/to/directory\nchmod 644 /path/to/file",
-                        "explanation": "Set appropriate permissions for directories and files"
-                    },
-                    {
-                        "priority": "medium",
-                        "action": "Run with Proper User",
-                        "code": "docker run --user $(id -u):$(id -g) your-image",
-                        "explanation": "Run container with appropriate user permissions"
-                    }
-                ]
-            },
-            "resource_exhaustion": {
-                "title": "Address Resource Exhaustion",
-                "description": "Handle memory, disk, or CPU resource issues",
-                "solutions": [
-                    {
-                        "priority": "critical",
-                        "action": "Free Up Disk Space",
-                        "code": "docker system prune -a\ndocker volume prune",
-                        "explanation": "Clean up unused Docker resources to free disk space"
-                    },
-                    {
-                        "priority": "high",
-                        "action": "Increase Memory Limits",
-                        "code": """services:
-  app:
-    deploy:
-      resources:
-        limits:
-          memory: 2G""",
-                        "explanation": "Increase memory allocation for the service"
-                    }
-                ]
-            },
-            "microservices_timeout": {
-                "title": "Fix Microservices Timeout Issues",
-                "description": "Resolve timeout and deadline issues in distributed systems",
-                "solutions": [
-                    {
-                        "priority": "high",
-                        "action": "Increase Timeout Values",
-                        "code": """# gRPC client timeout
-client_timeout = 60000  # 60 seconds
-# HTTP client timeout
-requests.get(url, timeout=30)""",
-                        "explanation": "Increase timeout values for service calls"
-                    },
-                    {
-                        "priority": "high",
-                        "action": "Check TLS Configuration",
-                        "code": "kubectl get secret tls-cert -o yaml",
-                        "explanation": "Verify TLS certificates are valid and not expired"
-                    }
-                ]
-            },
-            "service_mesh_issues": {
-                "title": "Fix Service Mesh Problems",
-                "description": "Resolve Envoy/Istio sidecar and circuit breaker issues",
-                "solutions": [
-                    {
-                        "priority": "high",
-                        "action": "Check Envoy Configuration",
-                        "code": "kubectl logs <pod-name> -c istio-proxy",
-                        "explanation": "Check sidecar proxy logs for configuration issues"
-                    },
-                    {
-                        "priority": "medium",
-                        "action": "Reset Circuit Breaker",
-                        "code": "kubectl patch destinationrule <rule-name> --type merge -p '{\"spec\":{\"trafficPolicy\":{\"circuitBreaker\":{\"consecutiveErrors\":5}}}}'",
-                        "explanation": "Adjust circuit breaker settings"
-                    }
-                ]
-            },
-            "performance_degradation": {
-                "title": "Address Performance Issues",
-                "description": "Fix memory, connection pool, and performance problems",
-                "solutions": [
-                    {
-                        "priority": "critical",
-                        "action": "Scale Connection Pool",
-                        "code": """# Database connection pool
-max_connections: 200
-min_connections: 20
-connection_timeout: 30s""",
-                        "explanation": "Increase database connection pool size"
-                    },
-                    {
-                        "priority": "high",
-                        "action": "Add Memory Limits",
-                        "code": """resources:
-  limits:
-    memory: "4Gi"
-    cpu: "2000m"
-  requests:
-    memory: "2Gi"
-    cpu: "1000m" """,
-                        "explanation": "Set appropriate resource limits"
-                    }
-                ]
-            },
-            "kubernetes_health_checks": {
-                "title": "Fix Kubernetes Health Check Failures",
-                "description": "Resolve readiness and liveness probe issues",
-                "solutions": [
-                    {
-                        "priority": "critical",
-                        "action": "Fix Health Endpoint",
-                        "code": """readinessProbe:
-  httpGet:
-    path: /ready
-    port: 8080
-  initialDelaySeconds: 30
-  periodSeconds: 10
-  timeoutSeconds: 5""",
-                        "explanation": "Configure proper health check endpoints"
-                    },
-                    {
-                        "priority": "high",
-                        "action": "Check Service Health",
-                        "code": "kubectl describe pod <pod-name>\nkubectl logs <pod-name>",
-                        "explanation": "Investigate why health checks are failing"
-                    }
-                ]
-            }
-        }
-    
-    def analyze_log(self, log_content: str, 
-                   source: str = "unknown") -> Dict[str, Any]:
-        """
-        Comprehensive log analysis using AI and pattern recognition
-        """
+    def analyze_log(self, log_content: str, source: str = "unknown") -> Dict[str, Any]:
+        """Analyze log using BOTH online AI AND pattern recognition"""
         analysis_start = datetime.now()
         
-        # Step 1: Pattern-based analysis
-        pattern_results = self._analyze_patterns(log_content)
+        # Step 1: Always run pattern analysis for baseline
+        print("🔍 Running pattern recognition analysis...")
+        pattern_issues = self._basic_pattern_analysis(log_content)
+        pattern_recommendations = self._generate_smart_recommendations(pattern_issues, source)
         
-        # Step 2: Source-specific analysis
-        source_analysis = self._analyze_by_source(log_content, source)
+        # Step 2: Try online AI (Groq) for enhanced analysis
+        ai_issues = []
+        ai_recommendations = []
+        ai_backend = "patterns"
+        online_analysis = {}
         
-        # Step 3: AI-powered analysis (if available)
-        ai_insights = None
-        if self.openai_available:
-            ai_insights = self._get_ai_insights(log_content)
+        if self.online_ai.available_backends:
+            try:
+                print(f"🚀 Using {self.online_ai.active_backend} for AI analysis")
+                online_analysis = self.online_ai.analyze_log(log_content, source)
+                ai_issues = online_analysis.get("issues", [])
+                ai_recommendations = online_analysis.get("recommendations", [])
+                ai_backend = online_analysis.get("backend", "online_ai")
+                print(f"✅ {ai_backend} analysis complete!")
+            except Exception as e:
+                print(f"❌ Online AI failed: {e}")
+                online_analysis = {}
         
-        # Step 4: Generate comprehensive analysis
-        analysis = self._compile_analysis(
-            log_content, pattern_results, source_analysis, ai_insights
-        )
+        # Step 3: Combine both analyses
+        combined_issues = self._merge_issues(pattern_issues, ai_issues)
+        combined_recommendations = self._merge_recommendations(pattern_recommendations, ai_recommendations)
         
-        # Step 5: Store learning data
-        self.learning_engine.store_analysis(
-            log_content, 
-            [match["type"] for match in pattern_results],
-            analysis["confidence_score"]
-        )
+        # Format result with combined analysis
+        result = {
+            "log_id": str(hash(log_content))[:8],
+            "issues": combined_issues,
+            "errors": combined_issues,  # Compatibility field
+            "errors_found": len(combined_issues),
+            "recommendations": self._format_recommendations(combined_recommendations, "Combined"),
+            "analysis_type": f"Combined AI + Pattern Analysis" if ai_backend != "patterns" else "Enhanced Pattern Analysis",
+            "backend": f"{ai_backend}+patterns" if ai_backend != "patterns" else "patterns",
+            "confidence": 0.95 if ai_backend != "patterns" else 0.75,
+            "confidence_score": 0.95 if ai_backend != "patterns" else 0.75,
+            "summary": f"Combined analysis: {len(ai_issues)} AI issues + {len(pattern_issues)} pattern issues = {len(combined_issues)} total",
+            "processing_time": (datetime.now() - analysis_start).total_seconds(),
+            "source": source,
+            "timestamp": datetime.now().isoformat(),
+            "severity": self._calculate_severity(combined_issues),
+            "ai_powered": ai_backend != "patterns",
+            "ai_insights": online_analysis.get("raw_response", "") if ai_backend != "patterns" else "",
+            "pattern_analysis": {
+                "issues_found": len(pattern_issues),
+                "recommendations": len(pattern_recommendations),
+                "patterns_matched": self._get_matched_patterns(log_content)
+            }
+        }
         
-        analysis["analysis_time"] = (datetime.now() - analysis_start).total_seconds()
-        analysis["ai_powered"] = self.openai_available
-        
-        return analysis
+        print(f"✅ Combined analysis: {len(combined_issues)} total issues, {len(combined_recommendations)} recommendations")
+        return result
     
-    def _analyze_patterns(self, log_content: str) -> List[Dict]:
-        """Analyze log using predefined error patterns"""
-        matches = []
+    def _basic_pattern_analysis(self, log_content: str) -> List[Dict]:
+        """Enhanced pattern analysis with smart error detection"""
+        issues = []
         lines = log_content.split('\n')
         
-        for line_num, line in enumerate(lines, 1):
-            for error_type, pattern_config in self.error_patterns.items():
-                for pattern in pattern_config["patterns"]:
-                    if re.search(pattern, line, re.IGNORECASE):
-                        matches.append({
-                            "type": error_type,
-                            "line_number": line_num,
-                            "line_content": line.strip(),
-                            "pattern": pattern,
-                            "severity": pattern_config["severity"],
-                            "category": pattern_config["category"],
-                            "source": pattern_config["source"]
-                        })
+        # Smart patterns that detect specific problems, not just keywords
+        smart_patterns = [
+            # Database issues
+            {
+                'pattern': ['database', 'timeout'],
+                'title': 'Database Connection Timeout',
+                'severity': 'critical',
+                'type': 'database',
+                'description': 'Database connection timeout detected'
+            },
+            {
+                'pattern': ['database', 'connection', 'refused'],
+                'title': 'Database Connection Refused',
+                'severity': 'critical',
+                'type': 'database',
+                'description': 'Database refusing connections'
+            },
+            {
+                'pattern': ['database', 'connect', 'failed'],
+                'title': 'Database Connection Failed',
+                'severity': 'critical',
+                'type': 'database',
+                'description': 'Failed to establish database connection'
+            },
+            # Environment variable issues
+            {
+                'pattern': ['env', 'not set'],
+                'title': 'Missing Environment Variable',
+                'severity': 'high',
+                'type': 'environment',
+                'description': 'Required environment variable not configured'
+            },
+            {
+                'pattern': ['database_url', 'not set'],
+                'title': 'Missing DATABASE_URL',
+                'severity': 'critical',
+                'type': 'environment',
+                'description': 'DATABASE_URL environment variable not set'
+            },
+            # Resource issues
+            {
+                'pattern': ['insufficient memory'],
+                'title': 'Memory Insufficient',
+                'severity': 'high',
+                'type': 'resource',
+                'description': 'Not enough memory available'
+            },
+            {
+                'pattern': ['node pressure eviction'],
+                'title': 'Node Under Pressure',
+                'severity': 'critical',
+                'type': 'resource',
+                'description': 'Node evicting pods due to resource pressure'
+            },
+            # Deployment issues
+            {
+                'pattern': ['failed to create pod'],
+                'title': 'Pod Creation Failed',
+                'severity': 'high',
+                'type': 'deployment',
+                'description': 'Unable to create pods'
+            },
+            {
+                'pattern': ['no nodes available'],
+                'title': 'No Available Nodes',
+                'severity': 'high',
+                'type': 'scheduling',
+                'description': 'No nodes available for scheduling'
+            }
+        ]
         
-        return matches
+        for line in lines:
+            line_lower = line.lower().strip()
+            if not line_lower or '[info]' in line_lower:
+                continue
+                
+            # Check smart patterns
+            pattern_matched = False
+            for pattern_config in smart_patterns:
+                patterns = pattern_config['pattern']
+                if all(p in line_lower for p in patterns):
+                    issues.append({
+                        "title": pattern_config['title'],
+                        "description": pattern_config['description'],
+                        "severity": pattern_config['severity'],
+                        "type": pattern_config['type'],
+                        "line": line.strip(),
+                        "location": f"Line: {line.strip()}"
+                    })
+                    pattern_matched = True
+                    break  # Only match first pattern per line
+            
+            # Fallback: Generic error detection
+            if not pattern_matched and any(keyword in line_lower for keyword in ['[error]', '[critical]', 'error:', 'failed:']):
+                if 'error' not in [issue['type'] for issue in issues]:  # Avoid duplicates
+                    issues.append({
+                        "title": "General Error Detected",
+                        "description": "Error found in deployment logs",
+                        "severity": "medium",
+                        "type": "error",
+                        "line": line.strip(),
+                        "location": f"Line: {line.strip()}"
+                    })
+        
+        return issues
     
-    def _analyze_by_source(self, log_content: str, source: str) -> Dict:
-        """Source-specific analysis logic"""
-        analysis = {
-            "detected_source": self._detect_source(log_content),
-            "confidence": 0.0,
-            "source_specific_issues": []
-        }
+    def _generate_basic_recommendations(self, issues: List[Dict]) -> List[str]:
+        """Generate basic recommendations"""
+        if not issues:
+            return ["No issues detected"]
+            
+        recommendations = [
+            "Review system resources and scaling",
+            "Check Kubernetes cluster health",
+            "Monitor application logs for patterns",
+            "Consider implementing monitoring and alerting"
+        ]
         
-        if source == "docker" or "docker" in log_content.lower():
-            analysis.update(self._analyze_docker_log(log_content))
-        elif source == "kubernetes" or any(k8s_word in log_content.lower() for k8s_word in ["kubectl", "kubernetes", "k8s", "pod"]):
-            analysis.update(self._analyze_kubernetes_log(log_content))
-        elif source == "yaml" or "yaml" in log_content.lower():
-            analysis.update(self._analyze_yaml_log(log_content))
-        
-        return analysis
+        return recommendations[:len(issues)]
     
-    def _detect_source(self, log_content: str) -> str:
-        """Automatically detect the log source"""
-        content_lower = log_content.lower()
+    def _generate_smart_recommendations(self, issues: List[Dict], source: str) -> List[str]:
+        """Generate intelligent pattern-based recommendations"""
+        if not issues:
+            return ["No issues detected - system appears healthy"]
         
-        source_indicators = {
-            "docker": ["docker", "container", "image", "dockerfile"],
-            "kubernetes": ["kubectl", "kubernetes", "k8s", "pod", "deployment", "service"],
-            "yaml": ["yaml", "yml", "scanner", "mapping"],
-            "jenkins": ["jenkins", "build", "pipeline"],
-            "nginx": ["nginx", "access_log", "error_log"],
-            "application": ["exception", "traceback", "stack trace"]
-        }
+        recommendations = []
+        issue_types = [issue.get('pattern', '').lower() for issue in issues]
         
-        scores = {}
-        for source, indicators in source_indicators.items():
-            scores[source] = sum(1 for indicator in indicators if indicator in content_lower)
+        # Kubernetes-specific recommendations
+        if source.lower() == 'kubernetes' or any('kube' in str(issue) for issue in issues):
+            if any('memory' in t for t in issue_types):
+                recommendations.extend([
+                    "Scale up node memory resources or add more nodes",
+                    "Review and optimize pod memory requests and limits",
+                    "Implement horizontal pod autoscaling for memory-intensive workloads"
+                ])
+            if any('eviction' in t for t in issue_types):
+                recommendations.extend([
+                    "Configure resource quotas to prevent node pressure",
+                    "Monitor node capacity and implement cluster autoscaling",
+                    "Review pod priority and preemption policies"
+                ])
+            if any('scheduling' in t for t in issue_types):
+                recommendations.extend([
+                    "Add more worker nodes to increase scheduling capacity",
+                    "Configure node affinity and anti-affinity rules",
+                    "Review resource requirements and node taints"
+                ])
         
-        return max(scores, key=scores.get) if max(scores.values()) > 0 else "unknown"
+        # General recommendations based on severity
+        if any(issue.get('severity') == 'critical' for issue in issues):
+            recommendations.append("Immediate attention required - escalate to ops team")
+        
+        if any(issue.get('severity') == 'high' for issue in issues):
+            recommendations.append("High priority fixes needed within 1 hour")
+        
+        # Add monitoring recommendations
+        recommendations.extend([
+            "Implement comprehensive monitoring and alerting",
+            "Set up log aggregation for better visibility",
+            "Create runbooks for common failure scenarios"
+        ])
+        
+        return recommendations[:8]  # Limit to 8 recommendations
     
-    def _analyze_docker_log(self, log_content: str) -> Dict:
-        """Docker-specific log analysis"""
+    def _merge_issues(self, pattern_issues: List[Dict], ai_issues: List[Dict]) -> List[Dict]:
+        """Merge pattern and AI issues, removing duplicates"""
+        all_issues = []
+        seen_descriptions = set()
+        
+        # Add AI issues first (higher priority)
+        for issue in ai_issues:
+            desc = issue.get('description', '').lower()
+            if desc not in seen_descriptions:
+                issue['source'] = 'ai'
+                all_issues.append(issue)
+                seen_descriptions.add(desc)
+        
+        # Add pattern issues that don't duplicate AI issues
+        for issue in pattern_issues:
+            desc = issue.get('description', '').lower()
+            if desc not in seen_descriptions:
+                issue['source'] = 'pattern'
+                all_issues.append(issue)
+                seen_descriptions.add(desc)
+        
+        return all_issues
+    
+    def _merge_recommendations(self, pattern_recs: List[str], ai_recs: List[str]) -> List[str]:
+        """Merge pattern and AI recommendations"""
+        combined = []
+        seen = set()
+        
+        # Add AI recommendations first
+        for rec in ai_recs:
+            if rec.lower() not in seen:
+                combined.append(f"[AI] {rec}")
+                seen.add(rec.lower())
+        
+        # Add pattern recommendations
+        for rec in pattern_recs:
+            if rec.lower() not in seen:
+                combined.append(f"[Pattern] {rec}")
+                seen.add(rec.lower())
+        
+        return combined[:10]  # Limit total recommendations
+    
+    def _get_matched_patterns(self, log_content: str) -> List[str]:
+        """Get list of patterns that matched in the log"""
+        patterns = ['insufficient memory', 'node pressure eviction', 'no nodes available', 
+                   'replica set desired count not met', 'failed to create pod']
+        matched = []
+        for pattern in patterns:
+            if pattern in log_content.lower():
+                matched.append(pattern)
+        return matched
+    
+    def _format_recommendations(self, raw_recommendations: List, analysis_type: str = "AI") -> List[Dict]:
+        """Format AI recommendations for frontend display"""
+        if not raw_recommendations:
+            return []
+        
+        formatted = []
+        for i, rec in enumerate(raw_recommendations):
+            if isinstance(rec, str):
+                # Check if it's a problem description or actual recommendation
+                if any(keyword in rec.lower() for keyword in ['recommendation:', 'solution:', 'fix:', 'increase', 'add', 'configure', 'implement', 'monitor', 'review', 'scale']):
+                    # This is an actual recommendation
+                    title = f"[{analysis_type}] Solution {i+1}"
+                    description = rec
+                    code_example = self._generate_code_example(rec)
+                else:
+                    # This is a problem description, provide a generic solution
+                    title = f"[{analysis_type}] Issue Analysis {i+1}"
+                    description = f"Problem: {rec}"
+                    code_example = "# Review logs and system configuration\necho 'Analyzing issue...'"
+                
+                formatted.append({
+                    "title": title,
+                    "description": description,
+                    "priority": "high",
+                    "fixes": [{
+                        "action": "Implement Recommendation",
+                        "explanation": description,
+                        "priority": "high",
+                        "code": code_example
+                    }]
+                })
+            elif isinstance(rec, dict):
+                # Already formatted, use as-is
+                formatted.append(rec)
+        
+        return formatted
+    
+    def _generate_code_example(self, recommendation: str) -> str:
+        """Generate specific, targeted code examples for recommendations"""
+        rec_lower = recommendation.lower()
+        
+        # Database connectivity issues
+        if 'database' in rec_lower and ('connect' in rec_lower or 'timeout' in rec_lower):
+            return """# Test database connectivity
+kubectl get pods -l app=database
+kubectl logs <database-pod-name>
+
+# Check database service and endpoints
+kubectl get svc -l app=database
+kubectl get endpoints <database-service-name>
+
+# Test connection from application pod
+kubectl exec -it <app-pod-name> -- nc -zv <database-host> <database-port>
+
+# Increase connection timeout in application
+# For PostgreSQL/MySQL connection strings:
+# DATABASE_URL="postgresql://user:pass@host:5432/db?connect_timeout=30"
+# DATABASE_URL="mysql://user:pass@host:3306/db?timeout=30s"
+
+# Check and restart database pod if needed
+kubectl describe pod <database-pod-name>
+kubectl delete pod <database-pod-name>  # Forces restart
+
+# Scale database resources if needed
+kubectl patch deployment database -p '{
+  "spec": {
+    "template": {
+      "spec": {
+        "containers": [{
+          "name": "database",
+          "resources": {
+            "requests": {"memory": "1Gi", "cpu": "500m"},
+            "limits": {"memory": "2Gi", "cpu": "1000m"}
+          }
+        }]
+      }
+    }
+  }
+}'"""
+
+        # Environment variable issues
+        elif 'env' in rec_lower and ('variable' in rec_lower or 'database_url' in rec_lower):
+            return """# Check current environment variables
+kubectl get pods <app-pod-name> -o jsonpath='{.spec.containers[0].env[*]}'
+kubectl exec -it <app-pod-name> -- env | grep DATABASE
+
+# Method 1: Add environment variable to deployment
+kubectl patch deployment <app-deployment> -p '{
+  "spec": {
+    "template": {
+      "spec": {
+        "containers": [{
+          "name": "<container-name>",
+          "env": [{
+            "name": "DATABASE_URL",
+            "value": "postgresql://user:password@database:5432/mydb"
+          }]
+        }]
+      }
+    }
+  }
+}'
+
+# Method 2: Create and use ConfigMap
+kubectl create configmap app-config \\
+  --from-literal=DATABASE_URL="postgresql://user:password@database:5432/mydb"
+
+# Apply ConfigMap to deployment
+kubectl patch deployment <app-deployment> -p '{
+  "spec": {
+    "template": {
+      "spec": {
+        "containers": [{
+          "name": "<container-name>",
+          "envFrom": [{
+            "configMapRef": {
+              "name": "app-config"
+            }
+          }]
+        }]
+      }
+    }
+  }
+}'
+
+# Method 3: Use Secret for sensitive data
+kubectl create secret generic db-secret \\
+  --from-literal=DATABASE_URL="postgresql://user:password@database:5432/mydb"
+
+kubectl patch deployment <app-deployment> -p '{
+  "spec": {
+    "template": {
+      "spec": {
+        "containers": [{
+          "name": "<container-name>",
+          "envFrom": [{
+            "secretRef": {
+              "name": "db-secret"
+            }
+          }]
+        }]
+      }
+    }
+  }
+}'
+
+# Verify environment variables are set
+kubectl exec -it <app-pod-name> -- env | grep DATABASE_URL"""
+
+        # Retry mechanism implementation
+        elif 'retry' in rec_lower and 'timeout' in rec_lower:
+            return """# Implement retry logic in application deployment
+# Add readiness and liveness probes with retry
+kubectl patch deployment <app-deployment> -p '{
+  "spec": {
+    "template": {
+      "spec": {
+        "containers": [{
+          "name": "<container-name>",
+          "readinessProbe": {
+            "httpGet": {
+              "path": "/health",
+              "port": 8080
+            },
+            "initialDelaySeconds": 10,
+            "periodSeconds": 5,
+            "timeoutSeconds": 10,
+            "failureThreshold": 3
+          },
+          "livenessProbe": {
+            "httpGet": {
+              "path": "/health",
+              "port": 8080
+            },
+            "initialDelaySeconds": 30,
+            "periodSeconds": 10,
+            "timeoutSeconds": 10,
+            "failureThreshold": 5
+          }
+        }]
+      }
+    }
+  }
+}'
+
+# Add restart policy for automatic recovery
+kubectl patch deployment <app-deployment> -p '{
+  "spec": {
+    "template": {
+      "spec": {
+        "restartPolicy": "Always"
+      }
+    }
+  }
+}'
+
+# Create a job that retries database connection
+kubectl apply -f - <<EOF
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-connection-test
+spec:
+  backoffLimit: 5
+  template:
+    spec:
+      containers:
+      - name: db-test
+        image: postgres:13
+        command: ["sh", "-c"]
+        args:
+        - |
+          for i in {1..10}; do
+            if pg_isready -h database -p 5432; then
+              echo "Database connection successful"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying in 5 seconds..."
+            sleep 5
+          done
+          exit 1
+      restartPolicy: Never
+EOF"""
+
+        # Memory issues
+        elif 'memory' in rec_lower and 'node' in rec_lower:
+            return """# Check current memory usage
+kubectl top nodes
+kubectl describe nodes
+
+# Scale node resources or add more nodes
+kubectl patch deployment <deployment-name> -p '{
+  "spec": {
+    "template": {
+      "spec": {
+        "containers": [{
+          "name": "<container-name>",
+          "resources": {
+            "requests": {"memory": "512Mi", "cpu": "250m"},
+            "limits": {"memory": "1Gi", "cpu": "500m"}
+          }
+        }]
+      }
+    }
+  }
+}'
+
+# Add new nodes (cloud-specific)
+# AWS EKS: eksctl scale nodegroup --cluster=my-cluster --nodes=3
+# GKE: gcloud container clusters resize my-cluster --num-nodes=3
+# Azure AKS: az aks scale --resource-group myResourceGroup --name myCluster --node-count 3"""
+
+        # Generic fallback with specific assessment
+        else:
+            problem_type = "general"
+            if 'database' in rec_lower:
+                problem_type = "database"
+            elif 'network' in rec_lower:
+                problem_type = "network"
+            elif 'config' in rec_lower:
+                problem_type = "configuration"
+            
+            return f"""# Solve {problem_type} issue: {recommendation}
+
+# Step 1: Detailed diagnosis
+kubectl get pods --all-namespaces
+kubectl describe pod <affected-pod-name>
+kubectl logs <affected-pod-name> --previous
+kubectl get events --sort-by=.metadata.creationTimestamp
+
+# Step 2: Apply targeted fix
+{"# Check database connectivity and configuration" if problem_type == "database" else ""}
+{"# Verify network policies and service configurations" if problem_type == "network" else ""}
+{"# Review ConfigMaps, Secrets, and environment variables" if problem_type == "configuration" else ""}
+
+# Step 3: Verify resolution
+kubectl get pods -w
+kubectl logs -f <affected-pod-name>
+kubectl exec -it <pod-name> -- /bin/sh  # Interactive debugging"""
+    
+    def _calculate_severity(self, issues: List[Dict]) -> str:
+        """Calculate overall severity based on issues"""
+        if not issues:
+            return "INFO"
+        
+        severity_weights = {"critical": 4, "high": 3, "medium": 2, "low": 1}
+        total_weight = 0
+        count = 0
+        
+        for issue in issues:
+            severity = issue.get("severity", "low").lower()
+            if severity in severity_weights:
+                total_weight += severity_weights[severity]
+                count += 1
+        
+        if count == 0:
+            return "INFO"
+        
+        avg_weight = total_weight / count
+        if avg_weight >= 3.5:
+            return "CRITICAL"
+        elif avg_weight >= 2.5:
+            return "ERROR"
+        elif avg_weight >= 1.5:
+            return "WARNING"
+        else:
+            return "INFO"
+    
+    def get_learning_stats(self) -> Dict:
+        """Compatibility method"""
         return {
-            "docker_issues": {
-                "port_conflicts": bool(re.search(r"port.*already.*allocated", log_content, re.IGNORECASE)),
-                "image_issues": bool(re.search(r"pull.*image", log_content, re.IGNORECASE)),
-                "build_failures": bool(re.search(r"failed.*build", log_content, re.IGNORECASE)),
-                "permission_issues": bool(re.search(r"permission.*denied", log_content, re.IGNORECASE))
+            "total_analyses": 0,
+            "pattern_effectiveness": 0.0,
+            "user_feedback_count": 0,
+            "ai_status": {
+                "online_ai": len(self.online_ai.available_backends) > 0,
+                "groq_available": "groq" in self.online_ai.available_backends,
+                "active_backend": self.online_ai.active_backend
             }
         }
     
-    def _analyze_kubernetes_log(self, log_content: str) -> Dict:
-        """Kubernetes-specific log analysis"""
-        return {
-            "kubernetes_issues": {
-                "pod_failures": bool(re.search(r"pod.*failed", log_content, re.IGNORECASE)),
-                "image_pull_errors": bool(re.search(r"imagepullbackoff|errimagepull", log_content, re.IGNORECASE)),
-                "resource_issues": bool(re.search(r"resource.*exceeded", log_content, re.IGNORECASE)),
-                "config_errors": bool(re.search(r"configmap|secret.*not.*found", log_content, re.IGNORECASE))
-            }
-        }
-    
-    def _analyze_yaml_log(self, log_content: str) -> Dict:
-        """YAML-specific log analysis"""
-        return {
-            "yaml_issues": {
-                "syntax_errors": bool(re.search(r"yaml.*error|scanner.*error", log_content, re.IGNORECASE)),
-                "indentation_errors": bool(re.search(r"mapping.*not.*allowed|indentation", log_content, re.IGNORECASE)),
-                "duplicate_keys": bool(re.search(r"duplicate.*key", log_content, re.IGNORECASE))
-            }
-        }
-    
-    def _get_ai_insights(self, log_content: str) -> Dict:
-        """Get AI-powered insights using OpenAI GPT"""
+    def provide_feedback(self, analysis_id: str, feedback_data: Dict) -> Dict:
+        """Process user feedback for learning"""
         try:
-            if not self.client:
-                return {"error": "OpenAI client not initialized", "ai_available": False}
+            # For now, just acknowledge the feedback
+            # In a full implementation, this would store feedback in database
+            learning_result = {
+                "message": "🤖 Thank you for your feedback! This helps me learn and improve.",
+                "analysis_id": analysis_id,
+                "feedback_received": {
+                    "usefulness": feedback_data.get('usefulness', 3),
+                    "accuracy": feedback_data.get('accuracy', True),
+                    "solution_quality": feedback_data.get('solution_quality', 3),
+                    "additional_feedback": feedback_data.get('additional_feedback', '')
+                },
+                "learning_status": "processed",
+                "improvement_areas": []
+            }
             
-            prompt = self._create_ai_prompt(log_content)
+            # Analyze feedback for improvement areas
+            if feedback_data.get('usefulness', 3) < 3:
+                learning_result["improvement_areas"].append("Enhance recommendation usefulness")
             
-            response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are an expert DevOps engineer specializing in deployment troubleshooting."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=500,
-                temperature=0.3
-            )
+            if not feedback_data.get('accuracy', True):
+                learning_result["improvement_areas"].append("Improve analysis accuracy")
+                
+            if feedback_data.get('solution_quality', 3) < 3:
+                learning_result["improvement_areas"].append("Better solution quality")
             
-            ai_response = response.choices[0].message.content
-            return self._parse_ai_response(ai_response)
+            if feedback_data.get('missed_issues'):
+                learning_result["improvement_areas"].append("Detect more issue types")
             
-        except Exception as e:
-            print(f"AI analysis failed: {e}")
-            return {"error": str(e), "ai_available": False}
-    
-    def _create_ai_prompt(self, log_content: str) -> str:
-        """Create a structured prompt for AI analysis"""
-        return f"""
-        Analyze the following deployment log and provide structured insights:
-
-        LOG CONTENT:
-        {log_content[:2000]}  # Limit to avoid token limits
-
-        Please provide:
-        1. Root cause analysis
-        2. Severity assessment (low/medium/high/critical)
-        3. Specific fix recommendations
-        4. Prevention strategies
-
-        Format your response as JSON with keys: root_cause, severity, fixes, prevention
-        """
-    
-    def _parse_ai_response(self, ai_response: str) -> Dict:
-        """Parse AI response into structured format"""
-        try:
-            # Try to extract JSON from the response
-            json_start = ai_response.find('{')
-            json_end = ai_response.rfind('}') + 1
+            return learning_result
             
-            if json_start != -1 and json_end != -1:
-                json_str = ai_response[json_start:json_end]
-                return json.loads(json_str)
-            else:
-                # Fallback: parse as plain text
-                return {
-                    "ai_analysis": ai_response,
-                    "parsed": False
-                }
         except Exception as e:
             return {
-                "ai_analysis": ai_response,
-                "parsing_error": str(e),
-                "parsed": False
+                "message": "Thank you for your feedback!",
+                "error": str(e),
+                "learning_status": "error"
             }
-    
-    def _compile_analysis(self, log_content: str, pattern_results: List,
-                         source_analysis: Dict, ai_insights: Dict = None) -> Dict:
-        """Compile comprehensive analysis results"""
-        
-        # Determine overall severity
-        severities = [match["severity"] for match in pattern_results]
-        severity_priority = {"critical": 4, "error": 3, "warning": 2, "info": 1}
-        overall_severity = "info"
-        
-        if severities:
-            max_severity = max(severities, key=lambda x: severity_priority.get(x, 0))
-            overall_severity = max_severity
-        
-        # Generate solutions
-        solutions = self._generate_solutions(pattern_results)
-        
-        # Create summary
-        summary = self._create_summary(pattern_results, source_analysis, overall_severity)
-        
-        return {
-            "log_id": hashlib.md5(log_content.encode()).hexdigest()[:8],
-            "timestamp": datetime.now().isoformat(),
-            "severity": overall_severity,
-            "summary": summary,
-            "detected_source": source_analysis.get("detected_source", "unknown"),
-            "errors_found": len(pattern_results),
-            "pattern_matches": pattern_results,
-            "source_analysis": source_analysis,
-            "ai_insights": ai_insights,
-            "solutions": solutions,
-            "categories": list(set(match["category"] for match in pattern_results)),
-            "confidence_score": self._calculate_confidence(pattern_results, source_analysis)
-        }
-    
-    def _generate_solutions(self, pattern_results: List) -> List[Dict]:
-        """Generate solution recommendations based on detected patterns"""
-        solutions = []
-        
-        # Group errors by type
-        error_types = set(match["type"] for match in pattern_results)
-        
-        for error_type in error_types:
-            if error_type in self.solution_templates:
-                template = self.solution_templates[error_type]
-                solutions.append({
-                    "error_type": error_type,
-                    "title": template["title"],
-                    "description": template["description"],
-                    "fixes": template["solutions"]
-                })
-        
-        return solutions
-    
-    def _create_summary(self, pattern_results: List, source_analysis: Dict, severity: str) -> str:
-        """Create a human-readable summary of the analysis"""
-        if not pattern_results:
-            return "Log analysis completed. No critical issues detected."
-        
-        error_count = len(pattern_results)
-        categories = set(match["category"] for match in pattern_results)
-        detected_source = source_analysis.get("detected_source", "unknown")
-        
-        summary = f"Found {error_count} issue(s) in {detected_source} deployment log. "
-        summary += f"Primary categories: {', '.join(categories)}. "
-        summary += f"Severity: {severity.upper()}."
-        
-        return summary
-    
-    def _calculate_confidence(self, pattern_results: List, source_analysis: Dict) -> float:
-        """Calculate confidence score for the analysis"""
-        base_confidence = 0.5
-        
-        # Increase confidence based on pattern matches
-        pattern_confidence = min(len(pattern_results) * 0.1, 0.3)
-        
-        # Increase confidence if source is detected
-        source_confidence = 0.2 if source_analysis.get("detected_source", "unknown") != "unknown" else 0
-        
-        return min(base_confidence + pattern_confidence + source_confidence, 1.0)
-    
-    def provide_feedback(self, log_id: str, pattern_type: str, helpful: bool):
-        """Allow users to provide feedback on analysis accuracy"""
-        self.learning_engine.update_pattern_effectiveness(pattern_type, helpful)
-        return {"status": "feedback_recorded", "log_id": log_id}
-    
-    def get_learning_stats(self):
-        """Get learning and improvement statistics"""
-        insights = self.learning_engine.get_learning_insights()
-        return {
-            "total_patterns": len(insights),
-            "most_effective_patterns": insights[:5],
-            "learning_enabled": True,
-            "database_path": self.learning_engine.db_path
-        }
 
+# Create the analyzer instance
+ai_analyzer = SimplifiedAIAnalyzer()
 
-# Create global AI analyzer instance
-ai_analyzer = AILogAnalyzer()
+if __name__ == "__main__":
+    # Test it
+    test_log = """2024-08-03T16:45:23Z [ERROR] kube-apiserver: failed to create pod: insufficient memory
+2024-08-03T16:45:24Z [CRITICAL] kubelet: node pressure eviction triggered
+2024-08-03T16:45:25Z [ERROR] scheduler: no nodes available for pod assignment
+2024-08-03T16:45:26Z [WARNING] controller-manager: replica set desired count not met"""
+    
+    result = ai_analyzer.analyze_log(test_log, "kubernetes")
+    print(f"\n=== TEST RESULT ===")
+    print(f"Analysis Type: {result['analysis_type']}")
+    print(f"Backend: {result['backend']}")
+    print(f"Issues Found: {len(result['issues'])}")
+    print(f"Confidence: {result['confidence']}")

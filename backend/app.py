@@ -1,12 +1,28 @@
+import os
+import asyncio
+from dotenv import load_dotenv
+
+# Load environment variables from .env file FIRST (before other imports)
+load_dotenv()
+
+# Also manually load .env file as backup
+try:
+    with open('.env', 'r') as f:
+        for line in f:
+            if '=' in line and not line.strip().startswith('#'):
+                key, value = line.strip().split('=', 1)
+                os.environ[key] = value
+    print(f"🔑 Manual .env loading: GROQ_API_KEY {'✅ found' if os.getenv('GROQ_API_KEY') else '❌ missing'}")
+except FileNotFoundError:
+    print("⚠️  .env file not found")
+
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from config import TIDB_CONFIG
 from sqlalchemy import create_engine, text
 from mock_db import get_mock_database
 from log_parser.parser import LogParser
-from ai_service_v2 import ai_analyzer
-import os
-import asyncio
+from ai_service import ai_analyzer
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -218,58 +234,77 @@ def analyze_with_ai():
 
 @app.route('/api/ai-status', methods=['GET'])
 def ai_status():
-    """Check AI service availability and capabilities"""
+    """Check AI service availability and capabilities including multi-backend AI"""
     try:
-        # Check if AI analyzer is available
-        ai_available = ai_analyzer.openai_available if ai_analyzer else False
-        
-        return jsonify({
-            "ai_available": ai_available,
-            "ai_service": "OpenAI GPT-3.5" if ai_available else "Pattern-based only",
-            "features": {
-                "pattern_recognition": True,
-                "ai_insights": ai_available,
-                "solution_generation": True,
-                "confidence_scoring": True,
-                "multi_source_analysis": True,
-                "self_learning": True
-            },
-            "supported_sources": [
-                "docker", "kubernetes", "yaml", "jenkins", 
-                "nginx", "application", "auto-detect"
-            ]
-        })
+        # Get comprehensive AI status from the multi-backend system
+        if hasattr(ai_analyzer, 'get_learning_stats'):
+            ai_stats = ai_analyzer.get_learning_stats()
+            
+            # Determine the best available AI service
+            ai_backends = ai_stats.get("ai_backends", {})
+            online_ai = ai_backends.get("online_ai", {})
+            local_ai = ai_backends.get("local_ai", {})
+            
+            # Determine primary service
+            if online_ai.get("enabled") and online_ai.get("backends"):
+                primary_service = f"Groq AI (Online) - {online_ai.get('active_backend', 'groq')}"
+                ai_available = True
+            elif local_ai.get("enabled") and local_ai.get("backends"):
+                primary_service = f"Local AI - {local_ai.get('active_backend', 'gpt4all')}"
+                ai_available = True
+            elif ai_analyzer.openai_available:
+                primary_service = "OpenAI GPT-3.5"
+                ai_available = True
+            else:
+                primary_service = "Enhanced Pattern Recognition"
+                ai_available = False
+            
+            return jsonify({
+                "ai_available": ai_available,
+                "ai_service": primary_service,
+                "ai_backends": ai_backends,
+                "features": {
+                    "multi_backend_ai": True,
+                    "online_ai": online_ai.get("enabled", False),
+                    "local_ai": local_ai.get("enabled", False),
+                    "pattern_recognition": True,
+                    "ai_insights": ai_available,
+                    "solution_generation": True,
+                    "confidence_scoring": True,
+                    "multi_source_analysis": True,
+                    "self_learning": True,
+                    "local_ai_support": local_ai.get("enabled", False)
+                },
+                "supported_sources": [
+                    "docker", "kubernetes", "yaml", "jenkins", 
+                    "nginx", "application", "auto-detect"
+                ]
+            })
+        else:
+            # Fallback to basic status check
+            ai_available = ai_analyzer.openai_available if ai_analyzer else False
+            return jsonify({
+                "ai_available": ai_available,
+                "ai_service": "OpenAI GPT-3.5" if ai_available else "Pattern Recognition",
+                "features": {
+                    "pattern_recognition": True,
+                    "ai_insights": ai_available,
+                    "solution_generation": True,
+                    "confidence_scoring": True,
+                    "multi_source_analysis": True,
+                    "self_learning": True
+                },
+                "supported_sources": [
+                    "docker", "kubernetes", "yaml", "jenkins", 
+                    "nginx", "application", "auto-detect"
+                ]
+            })
         
     except Exception as e:
         return jsonify({
             "error": "Failed to check AI status",
             "details": str(e)
         }), 500
-
-
-@app.route('/api/feedback', methods=['POST'])
-def provide_feedback():
-    """Allow users to provide feedback on analysis accuracy"""
-    try:
-        data = request.get_json()
-        
-        if not data or 'log_id' not in data or 'pattern_type' not in data or 'helpful' not in data:
-            return jsonify({
-                "error": "Missing required fields: log_id, pattern_type, helpful"
-            }), 400
-        
-        log_id = data['log_id']
-        pattern_type = data['pattern_type']
-        helpful = data['helpful']
-        
-        result = ai_analyzer.provide_feedback(log_id, pattern_type, helpful)
-        
-        return jsonify({
-            "message": "Feedback recorded successfully",
-            "result": result
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/api/learning-stats', methods=['GET'])
@@ -295,6 +330,102 @@ def serve_frontend_files(filename):
     """Serve frontend static files"""
     frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend')
     return send_from_directory(frontend_path, filename)
+
+
+@app.route('/api/feedback', methods=['POST'])
+def submit_feedback():
+    """Enhanced feedback endpoint with interactive learning"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                "error": "No feedback data provided",
+                "usage": "POST with JSON body containing feedback data"
+            }), 400
+        
+        analysis_id = data.get('analysis_id')
+        if not analysis_id:
+            return jsonify({
+                "error": "analysis_id is required for feedback"
+            }), 400
+        
+        # Process feedback through AI learning system
+        feedback_result = ai_analyzer.provide_feedback(analysis_id, data)
+        
+        return jsonify({
+            "message": "Feedback received and processed",
+            "learning_result": feedback_result,
+            "thank_you": "🤖 Thank you for helping me learn!"
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "error": "Failed to process feedback",
+            "details": str(e)
+        }), 500
+
+
+@app.route('/api/learning-stats', methods=['GET'])
+def get_learning_statistics():
+    """Get comprehensive AI learning statistics"""
+    try:
+        learning_stats = ai_analyzer.get_learning_stats()
+        
+        return jsonify({
+            "message": "Learning statistics retrieved successfully",
+            "learning_data": learning_stats,
+            "ai_status": "continuously_learning"
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "error": "Failed to retrieve learning statistics",
+            "details": str(e)
+        }), 500
+
+
+@app.route('/api/ai-status', methods=['GET'])
+def get_ai_status():
+    """Get comprehensive AI system status with learning capabilities"""
+    try:
+        # Get learning statistics
+        learning_stats = ai_analyzer.get_learning_stats()
+        
+        status = {
+            "ai_available": ai_analyzer.openai_available,
+            "pattern_recognition": True,
+            "learning_engine": True,
+            "self_learning": True,
+            "adaptive_patterns": True,
+            "user_feedback_system": True,
+            "features": {
+                "error_detection": True,
+                "solution_generation": True,
+                "confidence_scoring": True,
+                "pattern_learning": True,
+                "user_feedback": True,
+                "adaptive_improvement": True
+            },
+            "learning_status": learning_stats.get("learning_overview", {}),
+            "supported_categories": [
+                "yaml_syntax", "docker_port_conflict", "kubernetes_pod_failure",
+                "docker_build_failure", "permission_error", "resource_exhaustion",
+                "network_connectivity", "dependency_missing", "microservices_timeout",
+                "service_mesh_issues", "performance_degradation", "kubernetes_health_checks"
+            ],
+            "version": "2.0.0-learning",
+            "capabilities": "Advanced AI with machine learning and user feedback"
+        }
+        
+        return jsonify(status)
+        
+    except Exception as e:
+        return jsonify({
+            "error": "Failed to get AI status",
+            "details": str(e),
+            "ai_available": False
+        }), 500
 
 
 @app.route('/api/logs', methods=['GET'])

@@ -48,6 +48,28 @@ ENV/
 .venv/
 .env
 
+# Test files (should not be committed)
+**/test*.html
+**/test*.js
+**/test*.py
+**/debug*.html
+**/debug*.js
+**/mock*.py
+**/*_test.py
+**/*_old.*
+**/*_clean.*
+**/*_simple.*
+**/*_enhanced.*
+
+# Database files (if temporary)
+*.db-journal
+*.db-wal
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
 # IDEs
 .vscode/
 .idea/
