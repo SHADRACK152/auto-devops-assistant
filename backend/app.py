@@ -481,4 +481,13 @@ def get_fixes():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Get port from environment variable for cloud deployment
+    port = int(os.environ.get('PORT', 5000))
+    # Use debug=False for production
+    debug_mode = os.environ.get('FLASK_ENV', 'development') == 'development'
+    
+    print(f"🚀 Starting Auto DevOps Assistant on port {port}")
+    print(f"🔧 Debug mode: {debug_mode}")
+    print(f"🌐 Environment: {os.environ.get('FLASK_ENV', 'development')}")
+    
+    app.run(debug=debug_mode, host='0.0.0.0', port=port)
