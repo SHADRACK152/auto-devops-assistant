@@ -1,6 +1,13 @@
 # Auto DevOps Assistant
 
-An **AI-powered agent** that helps DevOps engineers debug and fix deployment errors faster by analyzing deployment logs, detecting common issues, and recommending intelligent fixes using advanced pattern recognition and OpenAI GPT integration.
+> **🌐 [Live Demo](https://shadrack152.github.io/auto-devops-assistant/) | 🎥 [Demo Video](#) | 📊 [Hackathon Details](HACKATHON_SUMMARY.md)**
+
+An **AI-powered agent** that helps DevOps engineers debug and fix deployment errors faster by analyzing deployment logs, detecting common issues, and recommending intelligent fixes using advanced pattern recognition and Groq AI integration.
+
+## 🚀 **Quick Demo**
+[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-GitHub_Pages-blue?style=for-the-badge)](https://shadrack152.github.io/auto-devops-assistant/)
+[![Source Code](https://img.shields.io/badge/💻_Source_Code-GitHub-black?style=for-the-badge)](https://github.com/SHADRACK152/auto-devops-assistant)
+[![TiDB Hackathon](https://img.shields.io/badge/🏆_TiDB_AgentX-Hackathon_2025-orange?style=for-the-badge)](#)
 
 ## 🎯 What It Does
 
