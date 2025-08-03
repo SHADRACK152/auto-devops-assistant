@@ -1,13 +1,21 @@
 # Auto DevOps Assistant
 
-> **🌐 [Live Demo](https://shadrack152.github.io/auto-devops-assistant/) | 🎥 [Demo Video](#) | 📊 [Hackathon Details](HACKATHON_SUMMARY.md)**
+> **🌐 [Live Demo](https://shadrack152.github.io/auto-devops-assistant/) | 🚀 [One-Click Online Demo](https://gitpod.io/#https://github.com/SHADRACK152/auto-devops-assistant) | 📊 [Hackathon Details](HACKATHON_SUMMARY.md)**
 
 An **AI-powered agent** that helps DevOps engineers debug and fix deployment errors faster by analyzing deployment logs, detecting common issues, and recommending intelligent fixes using advanced pattern recognition and Groq AI integration.
 
-## 🚀 **Quick Demo**
+## 🚀 **Try It Now - No Installation Required!**
+
+### **⚡ One-Click Online Demos:**
+[![Open in Gitpod](https://img.shields.io/badge/Open%20in-Gitpod-orange?style=for-the-badge&logo=gitpod)](https://gitpod.io/#https://github.com/SHADRACK152/auto-devops-assistant)
+[![Open in GitHub Codespaces](https://img.shields.io/badge/Open%20in-Codespaces-blue?style=for-the-badge&logo=github)](https://codespaces.new/SHADRACK152/auto-devops-assistant)
+[![Run on Repl.it](https://img.shields.io/badge/Run%20on-Repl.it-purple?style=for-the-badge&logo=replit)](https://replit.com/github/SHADRACK152/auto-devops-assistant)
+
+### **🌐 Static Demo:**
 [![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-GitHub_Pages-blue?style=for-the-badge)](https://shadrack152.github.io/auto-devops-assistant/)
-[![Source Code](https://img.shields.io/badge/💻_Source_Code-GitHub-black?style=for-the-badge)](https://github.com/SHADRACK152/auto-devops-assistant)
 [![TiDB Hackathon](https://img.shields.io/badge/🏆_TiDB_AgentX-Hackathon_2025-orange?style=for-the-badge)](#)
+
+**🎯 Just click any button above and start analyzing logs with AI immediately!**
 
 ## 🎯 What It Does
 
@@ -70,6 +78,32 @@ Auto DevOps Assistant/
 - TiDB vector search for similar issue detection
 - Machine learning for pattern improvement
 - Historical analysis and trend identification
+
+## 🌐 **Run Online - Zero Setup Required**
+
+### **🚀 One-Click Launch Options:**
+
+| Platform | Launch Time | Features | Best For |
+|----------|-------------|----------|----------|
+| **Gitpod** | ~2 minutes | Full VS Code environment | Development & Testing |
+| **GitHub Codespaces** | ~1 minute | Integrated with GitHub | Quick demos |
+| **Repl.it** | ~30 seconds | Instant browser IDE | Fast testing |
+
+**📱 Mobile-friendly:** All online platforms work on tablets and phones!
+
+### **🎯 What You Get:**
+- ✅ **Full AI Analysis** with Groq integration
+- ✅ **TiDB Vector Search** (mock mode for demo)
+- ✅ **Interactive Frontend** with real-time results
+- ✅ **No Installation** - runs entirely in browser
+- ✅ **Shareable URL** - send to anyone instantly
+
+### **⚡ Quick Demo Flow:**
+1. Click any "Open in..." button above
+2. Wait for environment to load (~1-2 minutes)
+3. Backend starts automatically on port 5000
+4. Open the preview URL to access the app
+5. Paste deployment logs and get AI analysis!
 
 ## 📦 Installation
 
