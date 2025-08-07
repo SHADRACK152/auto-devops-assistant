@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usprint("🚀 Starting Auto DevOps Assistant for Railway deployment... v2.2")/bin/env python3
 # Railway entry point for Auto DevOps Assistant
 import sys
 import os
