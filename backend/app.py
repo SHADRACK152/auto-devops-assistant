@@ -419,6 +419,23 @@ def get_learning_stats():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/debug-env', methods=['GET'])
+def debug_environment():
+    """Debug endpoint to check environment variables"""
+    try:
+        groq_key = os.getenv("GROQ_API_KEY", "")
+        return jsonify({
+            "groq_api_key_present": bool(groq_key),
+            "groq_api_key_length": len(groq_key) if groq_key else 0,
+            "groq_api_key_prefix": groq_key[:10] + "..." if groq_key else "NOT_SET",
+            "all_env_vars": [key for key in os.environ.keys() if 'groq' in key.lower() or 'api' in key.lower()],
+            "port": os.getenv("PORT", "5000"),
+            "flask_env": os.getenv("FLASK_ENV", "not_set")
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/frontend/<path:filename>')
 def serve_frontend_files(filename):
     """Serve frontend static files"""
