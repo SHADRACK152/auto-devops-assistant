@@ -369,14 +369,6 @@ def get_learning_stats():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/frontend')
-@app.route('/frontend/')
-def serve_frontend():
-    """Serve the frontend HTML"""
-    frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend')
-    return send_from_directory(frontend_path, 'index.html')
-
-
 @app.route('/frontend/<path:filename>')
 def serve_frontend_files(filename):
     """Serve frontend static files"""
@@ -428,68 +420,6 @@ def submit_feedback():
         return jsonify({
             "error": "Failed to process feedback",
             "details": str(e)
-        }), 500
-
-
-@app.route('/api/learning-stats', methods=['GET'])
-def get_learning_statistics():
-    """Get comprehensive AI learning statistics"""
-    try:
-        learning_stats = ai_analyzer.get_learning_stats()
-        
-        return jsonify({
-            "message": "Learning statistics retrieved successfully",
-            "learning_data": learning_stats,
-            "ai_status": "continuously_learning"
-        })
-        
-    except Exception as e:
-        return jsonify({
-            "error": "Failed to retrieve learning statistics",
-            "details": str(e)
-        }), 500
-
-
-@app.route('/api/ai-status', methods=['GET'])
-def get_ai_status():
-    """Get comprehensive AI system status with learning capabilities"""
-    try:
-        # Get learning statistics
-        learning_stats = ai_analyzer.get_learning_stats()
-        
-        status = {
-            "ai_available": ai_analyzer.openai_available,
-            "pattern_recognition": True,
-            "learning_engine": True,
-            "self_learning": True,
-            "adaptive_patterns": True,
-            "user_feedback_system": True,
-            "features": {
-                "error_detection": True,
-                "solution_generation": True,
-                "confidence_scoring": True,
-                "pattern_learning": True,
-                "user_feedback": True,
-                "adaptive_improvement": True
-            },
-            "learning_status": learning_stats.get("learning_overview", {}),
-            "supported_categories": [
-                "yaml_syntax", "docker_port_conflict", "kubernetes_pod_failure",
-                "docker_build_failure", "permission_error", "resource_exhaustion",
-                "network_connectivity", "dependency_missing", "microservices_timeout",
-                "service_mesh_issues", "performance_degradation", "kubernetes_health_checks"
-            ],
-            "version": "2.0.0-learning",
-            "capabilities": "Advanced AI with machine learning and user feedback"
-        }
-        
-        return jsonify(status)
-        
-    except Exception as e:
-        return jsonify({
-            "error": "Failed to get AI status",
-            "details": str(e),
-            "ai_available": False
         }), 500
 
 

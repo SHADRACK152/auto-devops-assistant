@@ -852,7 +852,7 @@ fi
 
 # FIX 3: Verify Dockerfile COPY paths are correct
 echo "Dockerfile COPY commands:"
-grep -A1 -B1 "COPY\|ADD" Dockerfile
+grep -A1 -B1 "COPY\\|ADD" Dockerfile
 
 # === STEP 4: TEST THE BUILD ===
 echo "Step 4: Testing Docker build..."
@@ -900,7 +900,7 @@ echo "⚠️  Cannot connect to PostgreSQL - check DATABASE_URL"
 
 # === STEP 3: CHECK EXISTING TABLES ===
 echo "Step 3: Listing existing tables..."
-psql $DATABASE_URL -c "\dt" 2>/dev/null | head -10
+psql $DATABASE_URL -c "\\dt" 2>/dev/null | head -10
 
 # === STEP 4: CHECK FOR MIGRATION FILES ===
 echo "Step 4: Looking for database migrations..."
@@ -939,7 +939,7 @@ php artisan migrate 2>/dev/null && echo "✅ Laravel migrations completed" || tr
 
 # === STEP 6: VERIFY TABLE CREATION ===
 echo "Step 6: Confirming table exists..."
-psql $DATABASE_URL -c "\d $TABLE_NAME" && echo "✅ Table $TABLE_NAME now exists!" || \
+psql $DATABASE_URL -c "\\d $TABLE_NAME" && echo "✅ Table $TABLE_NAME now exists!" || \
 echo "❌ Table creation failed - check logs above"
 
 # === STEP 7: FINAL VERIFICATION ===
