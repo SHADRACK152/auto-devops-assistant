@@ -304,21 +304,49 @@ class OnlineAIService:
     
     def _create_analysis_prompt(self, log_content: str, context: str) -> str:
         """Create a structured prompt for AI analysis"""
+        
+        # Detect log type for context-specific analysis
+        log_lower = log_content.lower()
+        platform_context = ""
+        
+        if 'net::err_connection_reset' in log_lower or 'firewall' in log_lower or 'connection reset' in log_lower:
+            platform_context = "This is a NETWORK/FIREWALL issue. Provide network troubleshooting commands (netstat, telnet, curl, firewall rules, iptables)."
+        elif 'docker:' in log_lower or 'bind for' in log_lower or 'port is already allocated' in log_lower:
+            platform_context = "This is a DOCKER log. Provide Docker-specific solutions (docker stop, docker ps, docker port commands)."
+        elif 'kubectl' in log_lower or 'kube-apiserver' in log_lower or 'kubelet' in log_lower:
+            platform_context = "This is a KUBERNETES log. Provide kubectl commands and Kubernetes YAML configurations."
+        elif 'modulenotfounderror' in log_lower or 'import error' in log_lower or 'python' in log_lower:
+            platform_context = "This is a PYTHON application log. Provide pip install commands and Python-specific fixes."
+        elif 'npm' in log_lower or 'node' in log_lower or 'javascript' in log_lower:
+            platform_context = "This is a NODE.JS log. Provide npm commands and JavaScript fixes."
+        elif 'ci/cd' in context.lower() or 'pipeline' in context.lower():
+            platform_context = "This is a CI/CD PIPELINE issue. Provide pipeline troubleshooting and deployment fixes."
+        
         return f"""
-Analyze the following DevOps log for issues, errors, and problems:
+You are an expert DevOps engineer. Analyze this log and provide SPECIFIC, ACTIONABLE solutions.
+
+{platform_context}
 
 Context: {context}
 
 Log Content:
 {log_content[:3000]}
 
+CRITICAL INSTRUCTIONS:
+- Match your solutions to the actual technology shown in the logs
+- For Docker errors: provide docker commands (docker stop, docker ps, docker run)
+- For Kubernetes errors: provide kubectl commands and YAML configs
+- For Python errors: provide pip install, import fixes, virtual environment commands
+- For port conflicts: provide specific port troubleshooting commands
+- Be SPECIFIC with actual commands, not generic advice
+
 Please provide:
 1. ISSUES FOUND: List specific issues with severity (critical, high, medium, low)
-2. ROOT CAUSES: Explain likely causes for each issue
-3. RECOMMENDATIONS: Provide specific actionable solutions
-4. PRIORITY: Order fixes by urgency
+2. ROOT CAUSES: Explain WHY each issue occurred
+3. SPECIFIC SOLUTIONS: Provide exact commands to fix each issue
+4. VERIFICATION: Commands to verify the fix worked
 
-Format your response clearly with sections.
+Format response with clear sections.
 """
     
     def _parse_ai_analysis(self, ai_response: str, backend: str) -> Dict[str, Any]:

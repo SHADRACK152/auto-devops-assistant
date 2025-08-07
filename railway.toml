@@ -11,7 +11,7 @@ restartPolicyType = "ON_FAILURE"
 [env]
 PORT = { default = "5000" }
 FLASK_ENV = { default = "production" }
-GROQ_API_KEY = { default = "your-groq-api-key-here" }
+GROQ_API_KEY = { default = "groq-api-key-" }
 
 [networking]
 externalPort = 5000

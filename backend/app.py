@@ -20,7 +20,6 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from config import TIDB_CONFIG
 from sqlalchemy import create_engine, text
-from mock_db import get_mock_database
 from log_parser.parser import LogParser
 from ai_service import ai_analyzer
 
@@ -62,10 +61,12 @@ def create_db_connection():
         print("Using mock database for development...")
         return None
 
-# Initialize database connection (TiDB or mock)
+# Initialize database connection (TiDB only)
 engine = create_db_connection()
-use_mock_db = engine is None
-mock_db = get_mock_database() if use_mock_db else None
+if engine is None:
+    print("❌ Failed to connect to TiDB. Please check your configuration.")
+    exit(1)
+
 log_parser = LogParser()
 
 @app.route('/')
@@ -84,22 +85,13 @@ def serve_static_files(filename):
 def health_check():
     """Health check endpoint to test database connectivity"""
     try:
-        if use_mock_db:
-            stats = mock_db.get_stats()
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
             return jsonify({
                 "status": "healthy",
-                "database": "mock_database",
-                "message": "Auto DevOps Assistant API running with mock database",
-                "stats": stats
+                "database": "tidb_connected",
+                "message": "Auto DevOps Assistant API running with TiDB"
             })
-        else:
-            with engine.connect() as connection:
-                connection.execute(text("SELECT 1"))
-                return jsonify({
-                    "status": "healthy",
-                    "database": "tidb_connected",
-                    "message": "Auto DevOps Assistant API running with TiDB"
-                })
     except Exception as e:
         return jsonify({
             "status": "unhealthy",
@@ -139,25 +131,32 @@ def upload_log():
                 "fallback_analysis": True
             }
         
-        # Store analysis results
-        if use_mock_db:
-            log_id = mock_db.add_log(
-                content=log_content,
-                source=source,
-                severity=analysis_result['severity'],
-                summary=analysis_result['summary']
-            )
-            analysis_result['log_id'] = log_id
-        else:
-            # TODO: Store in TiDB when connection is working
-            pass
+        # Store analysis results in TiDB
+        try:
+            with engine.connect() as connection:
+                # Store the log analysis in TiDB
+                insert_query = text("""
+                    INSERT INTO log_analysis (content, source, severity, summary, created_at)
+                    VALUES (:content, :source, :severity, :summary, NOW())
+                """)
+                result = connection.execute(insert_query, {
+                    'content': log_content,
+                    'source': source,
+                    'severity': analysis_result['severity'],
+                    'summary': analysis_result['summary']
+                })
+                connection.commit()
+                analysis_result['log_id'] = result.lastrowid
+        except Exception as db_error:
+            print(f"Database storage error: {db_error}")
+            analysis_result['log_id'] = "temp_" + str(hash(log_content))
         
         return jsonify({
             "message": "Log analyzed with AI-powered insights",
             "log_id": analysis_result['log_id'],
             "analysis": analysis_result,
             "ai_powered": analysis_result.get('ai_powered', False),
-            "database": "mock" if use_mock_db else "tidb"
+            "database": "tidb"
         })
         
     except Exception as e:
@@ -334,7 +333,7 @@ def serve_frontend_files(filename):
 
 @app.route('/api/feedback', methods=['POST'])
 def submit_feedback():
-    """Enhanced feedback endpoint with interactive learning"""
+    """Enhanced feedback endpoint with TiDB vector learning"""
     try:
         data = request.get_json()
         
@@ -345,18 +344,34 @@ def submit_feedback():
             }), 400
         
         analysis_id = data.get('analysis_id')
+        solution_id = data.get('solution_id', 'general')
+        rating = str(data.get('rating', '3'))
+        helpful = data.get('helpful', True)
+        feedback_text = data.get('feedback', '')
+        
         if not analysis_id:
             return jsonify({
                 "error": "analysis_id is required for feedback"
             }), 400
         
-        # Process feedback through AI learning system
-        feedback_result = ai_analyzer.provide_feedback(analysis_id, data)
+        # Record feedback in TiDB for vector learning
+        tidb_result = ai_analyzer.record_solution_feedback(
+            log_id=analysis_id,
+            solution_id=solution_id, 
+            rating=rating,
+            helpful=helpful,
+            feedback_text=feedback_text
+        )
+        
+        # Also process through existing learning system for compatibility
+        learning_result = ai_analyzer.provide_feedback(analysis_id, data)
         
         return jsonify({
-            "message": "Feedback received and processed",
-            "learning_result": feedback_result,
-            "thank_you": "🤖 Thank you for helping me learn!"
+            "message": "🎯 Feedback recorded in TiDB vector database!",
+            "tidb_learning": tidb_result,
+            "pattern_learning": learning_result,
+            "impact": "Your feedback helps improve AI recommendations for future deployments",
+            "learning_active": tidb_result.get('learning_active', False)
         })
         
     except Exception as e:
@@ -432,25 +447,21 @@ def get_ai_status():
 def get_logs():
     """Get all logs or search logs"""
     try:
-        if use_mock_db:
-            logs = mock_db.get_all_logs()
+        with engine.connect() as connection:
+            query = text("SELECT * FROM log_analysis ORDER BY created_at DESC LIMIT 100")
+            result = connection.execute(query)
+            logs = [dict(row) for row in result.fetchall()]
             return jsonify({
                 "logs": logs,
                 "count": len(logs),
-                "database": "mock"
-            })
-        else:
-            # TODO: Query TiDB when connection is working
-            return jsonify({
-                "logs": [],
-                "count": 0,
-                "database": "tidb",
-                "message": "TiDB integration pending"
+                "database": "tidb"
             })
     except Exception as e:
         return jsonify({
             "error": "Failed to retrieve logs",
-            "details": str(e)
+            "details": str(e),
+            "logs": [],
+            "count": 0
         }), 500
 
 
@@ -458,26 +469,41 @@ def get_logs():
 def get_fixes():
     """Get available fix suggestions"""
     try:
-        if use_mock_db:
-            fixes = mock_db.get_fix_suggestions()
+        with engine.connect() as connection:
+            # Query for common deployment patterns and fixes
+            query = text("""
+                SELECT pattern_name, description, solution 
+                FROM deployment_patterns 
+                ORDER BY confidence DESC 
+                LIMIT 10
+            """)
+            result = connection.execute(query)
+            fixes = [dict(row) for row in result.fetchall()]
             return jsonify({
                 "fixes": fixes,
                 "count": len(fixes),
-                "database": "mock"
-            })
-        else:
-            # TODO: Query TiDB when connection is working
-            return jsonify({
-                "fixes": [],
-                "count": 0,
-                "database": "tidb",
-                "message": "TiDB integration pending"
+                "database": "tidb"
             })
     except Exception as e:
+        # Return some default fixes if database query fails
+        default_fixes = [
+            {
+                "pattern_name": "Image Pull Error",
+                "description": "Container image pull failure",
+                "solution": "Check image name, registry credentials, and network connectivity"
+            },
+            {
+                "pattern_name": "Resource Constraints",
+                "description": "Pod scheduling issues due to insufficient resources",
+                "solution": "Increase resource requests or add more nodes to the cluster"
+            }
+        ]
         return jsonify({
-            "error": "Failed to retrieve fixes",
-            "details": str(e)
-        }), 500
+            "fixes": default_fixes,
+            "count": len(default_fixes),
+            "database": "fallback",
+            "error": str(e)
+        })
 
 
 if __name__ == '__main__':

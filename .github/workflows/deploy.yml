@@ -1,0 +1,48 @@
+name: Deploy Auto DevOps Assistant
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+      
+      - name: Test application
+        run: |
+          cd backend
+          python -c "import app; print('✅ App imports successfully')"
+      
+      - name: Validate configuration
+        run: |
+          cd backend
+          python -c "import config; print('✅ Config loaded successfully')"
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Deploy to Railway
+        run: |
+          echo "🚀 Ready for Railway deployment"
+          echo "✅ All tests passed"

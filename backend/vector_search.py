@@ -53,10 +53,43 @@ class DeploymentVectorSearch:
                         success_rate FLOAT DEFAULT 0.0,
                         usage_count INT DEFAULT 0,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                        VECTOR INDEX idx_embedding (embedding)
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
                     )
                 """))
+                
+                # Create vector index separately with proper TiDB syntax
+                try:
+                    # First, add TiFlash replica for vector index support
+                    print("🔧 Setting up TiFlash replica for vector search...")
+                    conn.execute(text("""
+                        ALTER TABLE deployment_patterns SET TIFLASH REPLICA 1
+                    """))
+                    print("✅ TiFlash replica configured")
+                    
+                    # Now create the vector index
+                    conn.execute(text("""
+                        CREATE VECTOR INDEX idx_embedding 
+                        ON deployment_patterns ((VEC_COSINE_DISTANCE(embedding)))
+                    """))
+                    print("✅ Vector index created successfully")
+                except Exception as index_error:
+                    # Try the alternative approach if TiFlash setup fails
+                    if "columnar replica" in str(index_error).lower():
+                        try:
+                            print("🔧 Trying alternative vector index creation...")
+                            conn.execute(text("""
+                                ALTER TABLE deployment_patterns 
+                                ADD VECTOR INDEX idx_embedding ((VEC_COSINE_DISTANCE(embedding))) 
+                                ADD_COLUMNAR_REPLICA_ON_DEMAND
+                            """))
+                            print("✅ Vector index created with on-demand replica")
+                        except Exception as alt_error:
+                            print(f"⚠️ Vector index creation info: {alt_error}")
+                            print("💡 Vector search will work without index (slower performance)")
+                    elif "already exists" not in str(index_error).lower():
+                        print(f"⚠️ Vector index creation info: {index_error}")
+                    else:
+                        print("✅ Vector index already exists")
                 
                 # Solution effectiveness tracking
                 conn.execute(text("""
@@ -95,12 +128,12 @@ class DeploymentVectorSearch:
                         solutions,
                         success_rate,
                         usage_count,
-                        VEC_COSINE_DISTANCE(embedding, :embedding) as similarity
+                        VEC_COSINE_DISTANCE(embedding, :embedding_vec) as similarity
                     FROM deployment_patterns
                     ORDER BY similarity ASC
                     LIMIT :limit
                 """), {
-                    "embedding": json.dumps(embedding.tolist()),
+                    "embedding_vec": str(embedding.tolist()),
                     "limit": limit
                 })
                 
@@ -134,7 +167,7 @@ class DeploymentVectorSearch:
                 conn.execute(text("""
                     INSERT INTO deployment_patterns 
                     (pattern_hash, log_content, error_patterns, solutions, embedding)
-                    VALUES (:hash, :content, :patterns, :solutions, :embedding)
+                    VALUES (:hash, :content, :patterns, :solutions, :embedding_vec)
                     ON DUPLICATE KEY UPDATE
                     usage_count = usage_count + 1,
                     updated_at = CURRENT_TIMESTAMP
@@ -143,7 +176,7 @@ class DeploymentVectorSearch:
                     "content": log_content,
                     "patterns": json.dumps(patterns),
                     "solutions": json.dumps(solutions),
-                    "embedding": json.dumps(embedding.tolist())
+                    "embedding_vec": str(embedding.tolist())
                 })
                 
                 conn.commit()
