@@ -3,7 +3,7 @@
 import sys
 import os
 
-print("🚀 Starting Auto DevOps Assistant for Railway deployment... v2")
+print("🚀 Starting Auto DevOps Assistant for Railway deployment... v2.1")
 
 try:
     # Add both root and backend to Python path
@@ -15,6 +15,13 @@ try:
     
     print(f"✅ Root directory: {root_path}")
     print(f"✅ Backend directory: {backend_path}")
+    
+    # Validate environment variables
+    try:
+        from config import validate_config
+        validate_config()
+    except ImportError:
+        print("⚠️  Config validation not available")
     
     # Import the Flask app from backend
     sys.path.append(backend_path)

@@ -40,3 +40,22 @@ AI_TEMPERATURE = 0.3
 # Flask Configuration
 DEBUG = True
 SECRET_KEY = "508080"
+
+# Validation - Check if required environment variables are set
+def validate_config():
+    """Validate that required environment variables are set"""
+    required_vars = {
+        "GROQ_API_KEY": GROQ_API_KEY,
+        "TIDB_USER": TIDB_CONFIG["user"],
+        "TIDB_PASSWORD": TIDB_CONFIG["password"]
+    }
+    
+    missing_vars = [var for var, value in required_vars.items() if not value]
+    
+    if missing_vars:
+        print(f"⚠️  Missing required environment variables: {', '.join(missing_vars)}")
+        print("🔧 Please set these in Railway dashboard under Variables tab")
+        return False
+    else:
+        print("✅ All required environment variables are set")
+        return True
