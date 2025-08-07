@@ -76,6 +76,20 @@ class EnhancedPatternRecognition:
                 'description': 'Docker COPY command failed - file missing from build context'
             },
             {
+                'keywords': ['port', 'already allocated'],
+                'pattern_type': 'docker_port_conflict',
+                'severity': 'critical',
+                'title': 'Docker Port Conflict',
+                'description': 'Docker container port is already in use by another process'
+            },
+            {
+                'keywords': ['bind for', 'failed'],
+                'pattern_type': 'docker_port_bind',
+                'severity': 'critical',
+                'title': 'Docker Port Bind Failed',  
+                'description': 'Docker cannot bind to port - port conflict detected'
+            },
+            {
                 'keywords': ['relation', 'does not exist'],
                 'pattern_type': 'postgresql_schema',
                 'severity': 'critical', 
@@ -191,6 +205,8 @@ class EnhancedPatternRecognition:
         # Pattern-specific solutions stored as methods
         solution_generators = {
             'docker_build_failed': self._solve_docker_build,
+            'docker_port_conflict': self._solve_docker_port_conflict,
+            'docker_port_bind': self._solve_docker_port_conflict,  # Same solution
             'postgresql_schema': self._solve_postgresql_schema,
             'mysql_auth': self._solve_mysql_auth,
             'resource_memory': self._solve_memory_resources,
@@ -246,6 +262,61 @@ echo "✅ Docker build issue resolved!"
 """,
             estimated_time="10-20 minutes",
             success_rate=0.89
+        )
+    
+    def _solve_docker_port_conflict(self, pattern: Dict, log_content: str) -> PatternSolution:
+        """Complete Docker port conflict resolution"""
+        # Extract port from log content
+        import re
+        port_match = re.search(r'port[^0-9]*(\d+)', log_content, re.IGNORECASE)
+        conflict_port = port_match.group(1) if port_match else "80"
+        
+        return PatternSolution(
+            pattern_id=f"docker_port_{hash(log_content) % 10000}",
+            error_type="docker_port_conflict",
+            confidence=0.95,
+            solution_title=f"Docker Port {conflict_port} Conflict Resolution",
+            solution_steps=[
+                f"1. Identify which process is using port {conflict_port}",
+                "2. Stop the conflicting Docker container if not essential",
+                "3. Remove the conflicting container if no longer needed",
+                "4. Alternative: Change your application to use a different port",
+                "5. Restart your application container with resolved port"
+            ],
+            code_example=f"""# DOCKER PORT CONFLICT RESOLUTION
+echo "🔧 Resolving Docker port {conflict_port} conflict..."
+
+# Step 1: Find what's using the port
+echo "Processes using port {conflict_port}:"
+netstat -tulpn | grep {conflict_port} || ss -tulpn | grep {conflict_port}
+docker ps --format "table {{{{.Names}}}}\t{{{{.Ports}}}}" | grep {conflict_port}
+
+# Step 2: Stop conflicting container
+CONFLICTING_CONTAINER=$(docker ps --format "{{{{.Names}}}}" --filter "publish={conflict_port}")
+if [ -n "$CONFLICTING_CONTAINER" ]; then
+    echo "Stopping conflicting container: $CONFLICTING_CONTAINER"
+    docker stop $CONFLICTING_CONTAINER
+    
+    # Step 3: Remove if not needed (optional)
+    echo "Remove container? (y/n)"
+    read -r response
+    if [ "$response" = "y" ]; then
+        docker rm $CONFLICTING_CONTAINER
+    fi
+else
+    echo "No Docker containers found using port {conflict_port}"
+    echo "Other process may be using the port:"
+    lsof -i :{conflict_port} || netstat -tulpn | grep {conflict_port}
+fi
+
+# Step 4: Alternative - use different port for your app
+echo "Alternative: Run your container on different port:"
+echo "docker run -p 8080:{conflict_port} your-app"
+
+echo "✅ Port {conflict_port} conflict resolved!"
+""",
+            estimated_time="5-10 minutes",
+            success_rate=0.92
         )
     
     def _solve_postgresql_schema(self, pattern: Dict, log_content: str) -> PatternSolution:

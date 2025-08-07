@@ -208,16 +208,58 @@ function updateStats(data) {
     
     // Extract analysis data (backend returns it in 'analysis' field)
     const analysis = data.analysis || data;
-    const issues = analysis.issues || [];
-    const solutions = analysis.recommendations || analysis.solutions || [];
     
-    if (totalIssues) totalIssues.textContent = issues.length;
-    if (criticalIssues) criticalIssues.textContent = issues.filter(i => 
-        (i.severity && i.severity.toLowerCase() === 'critical') || 
-        (i.description && i.description.toLowerCase().includes('critical'))
-    ).length;
-    if (confidenceScore) confidenceScore.textContent = analysis.confidence_score || analysis.confidence || '85%';
+    // Handle enhanced format with single solution
+    let issues = analysis.issues || analysis.errors || [];
+    let solution = analysis.solution || null;
+    let solutions = [];
+    
+    // Convert single solution to array for counting
+    if (solution) {
+        solutions = [solution];
+    } else {
+        solutions = analysis.recommendations || analysis.solutions || [];
+    }
+    
+    // Handle issues_summary format
+    let issueCount = issues.length;
+    if (analysis.issues_summary && analysis.issues_summary.total_issues) {
+        issueCount = analysis.issues_summary.total_issues;
+    }
+    
+    // Handle critical issues detection
+    let criticalCount = 0;
+    if (analysis.issues_summary && analysis.issues_summary.severity_level) {
+        criticalCount = analysis.issues_summary.severity_level === 'critical' ? 1 : 0;
+    } else {
+        criticalCount = issues.filter(i => 
+            (i.severity && i.severity.toLowerCase() === 'critical') || 
+            (i.description && i.description.toLowerCase().includes('critical')) ||
+            (i.title && i.title.toLowerCase().includes('critical'))
+        ).length;
+    }
+    
+    // Extract confidence properly
+    let confidence = analysis.confidence_score || analysis.confidence || 0.85;
+    if (typeof confidence === 'number' && confidence <= 1) {
+        confidence = Math.round(confidence * 100) + '%';
+    } else if (typeof confidence === 'string' && !confidence.includes('%')) {
+        confidence = confidence + '%';
+    }
+    
+    // Update UI
+    if (totalIssues) totalIssues.textContent = issueCount;
+    if (criticalIssues) criticalIssues.textContent = criticalCount;
+    if (confidenceScore) confidenceScore.textContent = confidence;
     if (solutionsCount) solutionsCount.textContent = solutions.length;
+    
+    console.log('Stats updated:', { 
+        issues: issueCount, 
+        critical: criticalCount, 
+        confidence: confidence, 
+        solutions: solutions.length 
+    });
+}
 }
 
 function generateAnalysisHTML(data) {
