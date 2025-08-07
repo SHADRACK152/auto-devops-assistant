@@ -1,0 +1,53 @@
+# Dockerignore for smaller Railway deployment
+# Exclude heavy development files
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Development tools
+.vscode/
+.idea/
+
+# Documentation and guides
+*.md
+DEPLOYMENT_GUIDE.md
+HACKATHON_SUMMARY.md
+AUTO-COMMIT-README.md
+
+# Auto-commit system (not needed in production)
+auto-commit.bat
+auto-commit.ps1
+setup-scheduler.bat
+check-status.bat
+
+# Git
+.git/
+.github/
+
+# Frontend (deploy separately if needed)
+frontend/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Test files
+tests/
+test_*.py
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
