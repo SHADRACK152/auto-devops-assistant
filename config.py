@@ -42,6 +42,8 @@ DEBUG = True
 SECRET_KEY = "508080"
 
 # Validation - Check if required environment variables are set
+
+
 def validate_config():
     """Validate that required environment variables are set"""
     required_vars = {
@@ -49,7 +51,7 @@ def validate_config():
         "TIDB_USER": TIDB_CONFIG["user"],
         "TIDB_PASSWORD": TIDB_CONFIG["password"]
     }
-    
+      
     missing_vars = [var for var, value in required_vars.items() if not value]
     
     if missing_vars:
