@@ -92,7 +92,15 @@ log_parser = LogParser()
 def index():
     """Serve the frontend HTML at root"""
     try:
-        frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend')
+        # For Railway deployment, frontend is at ./frontend from project root
+        current_dir = os.getcwd()
+        frontend_path = os.path.join(current_dir, 'frontend')
+        
+        # Check if frontend directory exists
+        if not os.path.exists(frontend_path):
+            # Fallback: try relative to this file
+            frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend')
+        
         return send_from_directory(frontend_path, 'index.html')
     except Exception as e:
         # Fallback API response if frontend not available
@@ -101,6 +109,7 @@ def index():
             "status": "online", 
             "version": "1.0.0",
             "frontend_error": str(e),
+            "current_dir": os.getcwd(),
             "endpoints": ["/health", "/api/upload-log", "/api/analyze-ai", "/api/ai-status"]
         })
 
@@ -118,16 +127,30 @@ def api_info():
 def serve_frontend():
     """Serve the frontend HTML at /frontend"""
     try:
-        frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend')
+        current_dir = os.getcwd()
+        frontend_path = os.path.join(current_dir, 'frontend')
+        
+        if not os.path.exists(frontend_path):
+            frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend')
+            
         return send_from_directory(frontend_path, 'index.html')
     except Exception:
         return "Frontend not available in this deployment"
 
+
 @app.route('/<path:filename>')
 def serve_static_files(filename):
     """Serve static files (CSS, JS, images) from frontend directory"""
-    frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend')
-    return send_from_directory(frontend_path, filename)
+    try:
+        current_dir = os.getcwd()
+        frontend_path = os.path.join(current_dir, 'frontend')
+        
+        if not os.path.exists(frontend_path):
+            frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend')
+            
+        return send_from_directory(frontend_path, filename)
+    except Exception as e:
+        return f"File not found: {filename}", 404
 
 @app.route('/health')
 def health_check():
