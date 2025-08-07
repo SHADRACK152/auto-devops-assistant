@@ -18,7 +18,15 @@ class SimplifiedAIAnalyzer:
     """Simplified AI analyzer focusing on online AI"""
     
     def __init__(self):
-        self.online_ai = OnlineAIService()
+        print("🚀 Initializing SimplifiedAIAnalyzer...")
+        try:
+            self.online_ai = OnlineAIService()
+            print(f"✅ OnlineAIService initialized. Available backends: {self.online_ai.available_backends}")
+            print(f"✅ Active backend: {self.online_ai.active_backend}")
+        except Exception as e:
+            print(f"❌ Failed to initialize OnlineAIService: {e}")
+            self.online_ai = None
+        
         self.openai_available = False  # Keep for compatibility
         
     def analyze_log(self, log_content: str, source: str = "unknown") -> Dict[str, Any]:
@@ -36,7 +44,7 @@ class SimplifiedAIAnalyzer:
         ai_backend = "patterns"
         online_analysis = {}
         
-        if self.online_ai.available_backends:
+        if self.online_ai and hasattr(self.online_ai, 'available_backends') and self.online_ai.available_backends:
             try:
                 print(f"🚀 Using {self.online_ai.active_backend} for AI analysis")
                 online_analysis = self.online_ai.analyze_log(log_content, source)
@@ -47,6 +55,8 @@ class SimplifiedAIAnalyzer:
             except Exception as e:
                 print(f"❌ Online AI failed: {e}")
                 online_analysis = {}
+        else:
+            print("ℹ️  Online AI not available, using pattern recognition only")
         
         # Step 3: Combine both analyses and get proven solutions
         combined_issues = self._merge_issues(pattern_issues, ai_issues)
@@ -1428,14 +1438,37 @@ echo "Basic troubleshooting complete!"
     
     def get_learning_stats(self) -> Dict:
         """Compatibility method"""
+        # Safe access to online_ai attributes
+        ai_backends_available = 0
+        groq_available = False
+        active_backend = "pattern_recognition"
+        
+        if self.online_ai and hasattr(self.online_ai, 'available_backends'):
+            ai_backends_available = len(self.online_ai.available_backends)
+            groq_available = "groq" in self.online_ai.available_backends
+            if hasattr(self.online_ai, 'active_backend'):
+                active_backend = self.online_ai.active_backend or "pattern_recognition"
+        
         return {
             "total_analyses": 0,
             "pattern_effectiveness": 0.0,
             "user_feedback_count": 0,
             "ai_status": {
-                "online_ai": len(self.online_ai.available_backends) > 0,
-                "groq_available": "groq" in self.online_ai.available_backends,
-                "active_backend": self.online_ai.active_backend
+                "online_ai": ai_backends_available > 0,
+                "groq_available": groq_available,
+                "active_backend": active_backend
+            },
+            "ai_backends": {
+                "online_ai": {
+                    "enabled": ai_backends_available > 0,
+                    "backends": self.online_ai.available_backends if self.online_ai and hasattr(self.online_ai, 'available_backends') else [],
+                    "active_backend": active_backend
+                },
+                "local_ai": {
+                    "enabled": False,
+                    "backends": [],
+                    "active_backend": None
+                }
             }
         }
     

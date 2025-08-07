@@ -15,6 +15,7 @@ requests==2.32.4
 
 # AI-Powered Analysis
 openai==1.55.3
+groq==0.4.1
 
 # Essential Web Framework Dependencies (auto-installed with Flask)
 Werkzeug==3.1.3

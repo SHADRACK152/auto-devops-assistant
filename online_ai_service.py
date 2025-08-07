@@ -20,8 +20,21 @@ class OnlineAIService:
     
     def _load_api_keys(self) -> Dict[str, str]:
         """Load API keys from environment variables or config"""
+        # Try environment variable first
+        groq_key = os.getenv("GROQ_API_KEY", "")
+        
+        # Railway fallback - check if we're in Railway environment
+        if not groq_key and os.getenv("RAILWAY_ENVIRONMENT"):
+            # For Railway deployment, we'll set the API key via Railway dashboard
+            print("🔑 Railway environment detected, but GROQ_API_KEY not set")
+            print("⚠️  Please set GROQ_API_KEY in Railway dashboard under Variables tab")
+        elif groq_key:
+            print("✅ Groq API key loaded from environment")
+        else:
+            print("⚠️  No Groq API key found - AI analysis will be limited to pattern recognition")
+            
         return {
-            "groq": os.getenv("GROQ_API_KEY", ""),
+            "groq": groq_key,
             "huggingface": os.getenv("HUGGINGFACE_API_KEY", ""),
             "together": os.getenv("TOGETHER_API_KEY", ""),
             "cohere": os.getenv("COHERE_API_KEY", "")
