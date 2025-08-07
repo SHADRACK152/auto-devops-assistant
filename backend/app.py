@@ -426,6 +426,11 @@ def debug_environment():
         groq_key = os.getenv("GROQ_API_KEY", "")
         tidb_user = os.getenv("TIDB_USER", "")
         tidb_password = os.getenv("TIDB_PASSWORD", "")
+        tidb_host = os.getenv("TIDB_HOST", "")
+        
+        # Show Railway-specific variables
+        railway_env = os.getenv("RAILWAY_ENVIRONMENT_NAME", "")
+        railway_service = os.getenv("RAILWAY_SERVICE_NAME", "")
         
         return jsonify({
             "groq_api_key_present": bool(groq_key),
@@ -433,11 +438,12 @@ def debug_environment():
             "groq_api_key_prefix": groq_key[:10] + "..." if groq_key else "NOT_SET",
             "tidb_user_present": bool(tidb_user),
             "tidb_password_present": bool(tidb_password),
-            "tidb_host": os.getenv("TIDB_HOST", "NOT_SET"),
-            "railway_environment": bool(os.getenv("RAILWAY_ENVIRONMENT")),
+            "tidb_host": tidb_host if tidb_host else "NOT_SET",
+            "railway_environment": railway_env if railway_env else "NOT_DETECTED",
+            "railway_service": railway_service if railway_service else "NOT_DETECTED",
             "port": os.getenv("PORT", "5000"),
             "flask_env": os.getenv("FLASK_ENV", "not_set"),
-            "env_vars_count": len([k for k in os.environ.keys() if any(x in k.lower() for x in ['groq', 'tidb', 'api'])])
+            "all_env_keys": list(os.environ.keys())[:10]  # Show first 10 env var names
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
