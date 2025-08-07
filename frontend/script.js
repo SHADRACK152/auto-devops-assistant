@@ -1,6 +1,6 @@
 // Auto DevOps Assistant Frontend JavaScript - Clean Version
 
-const API_BASE_URL = 'http://127.0.0.1:5000';
+const API_BASE_URL = 'https://auto-devops-assistant-production.up.railway.app';
 
 // Store current analysis for feedback
 let currentAnalysis = null;
