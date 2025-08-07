@@ -68,6 +68,11 @@ venv\Scripts\activate  # Windows (use `source venv/bin/activate` on macOS/Linux)
 pip install -r requirements.txt
 ```
 
+> **Note**: The project has two requirements.txt files:
+> - `requirements.txt` (root) - Used by Railway for deployment
+> - `backend/requirements.txt` - For local development
+> Both files are kept in sync for consistency.
+
 3. **Environment Configuration**
 Create a `.env` file in the `backend/` directory:
 ```env
@@ -128,33 +133,41 @@ This DevOps assistant showcases:
 
 ### Common Issues:
 
-**1. Module Import Errors**
+**1. ModuleNotFoundError: No module named 'numpy'**
+```bash
+# For Railway deployment: Check root requirements.txt has numpy
+# For local development: Install in backend directory
+cd backend
+pip install -r requirements.txt
+```
+
+**2. Module Import Errors**
 ```bash
 # Ensure you're in the backend directory
 cd backend
 python app.py
 ```
 
-**2. Missing Dependencies**
+**3. Missing Dependencies**
 ```bash
 # Install all required packages
 cd backend
 pip install -r requirements.txt
 ```
 
-**3. Port 5000 Already in Use**
+**4. Port 5000 Already in Use**
 ```bash
 # Windows: Kill process using port 5000
 netstat -ano | findstr :5000
 taskkill /PID <PID_NUMBER> /F
 ```
 
-**4. TiDB Connection Issues**
+**5. TiDB Connection Issues**
 - Verify your `.env` file has correct TiDB credentials
 - Check network connectivity to TiDB
 - Ensure the `auto_devops` database exists
 
-**5. Frontend Loading Issues**
+**6. Frontend Loading Issues**
 - Access http://127.0.0.1:5000/ (not localhost)
 - Check browser console for JavaScript errors
 - Clear browser cache and refresh
