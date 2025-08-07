@@ -221,10 +221,15 @@ function updateStats(data) {
         solutions = analysis.recommendations || analysis.solutions || [];
     }
     
-    // Handle issues_summary format
-    let issueCount = issues.length;
+    // Handle issues_summary format or direct issue counting
+    let issueCount = 0;
     if (analysis.issues_summary && analysis.issues_summary.total_issues) {
         issueCount = analysis.issues_summary.total_issues;
+    } else if (issues.length > 0) {
+        issueCount = issues.length;
+    } else if (solution) {
+        // If we have a solution, assume there's at least 1 issue
+        issueCount = 1;
     }
     
     // Handle critical issues detection
@@ -239,6 +244,14 @@ function updateStats(data) {
         ).length;
     }
     
+    // Count solutions properly - prioritize single solution format
+    let solutionCount = 0;
+    if (solution) {
+        solutionCount = 1;  // Enhanced format has one comprehensive solution
+    } else if (solutions && solutions.length > 0) {
+        solutionCount = solutions.length;  // Fallback to multiple solutions
+    }
+    
     // Extract confidence properly
     let confidence = analysis.confidence_score || analysis.confidence || 0.85;
     if (typeof confidence === 'number' && confidence <= 1) {
@@ -251,13 +264,13 @@ function updateStats(data) {
     if (totalIssues) totalIssues.textContent = issueCount;
     if (criticalIssues) criticalIssues.textContent = criticalCount;
     if (confidenceScore) confidenceScore.textContent = confidence;
-    if (solutionsCount) solutionsCount.textContent = solutions.length;
+    if (solutionsCount) solutionsCount.textContent = solutionCount;
     
     console.log('Stats updated:', { 
         issues: issueCount, 
         critical: criticalCount, 
         confidence: confidence, 
-        solutions: solutions.length 
+        solutions: solutionCount 
     });
 }
 
