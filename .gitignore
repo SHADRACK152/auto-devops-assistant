@@ -48,6 +48,26 @@ ENV/
 .venv/
 .env
 
+# Test files and temporary files
+test_*.py
+*_test.py
+temp_*.txt
+*.tmp
+
+# Duplicate and backup files
+*_backup.*
+*.bak
+*~
+
+# Auto-commit logs
+auto-commit.log
+
+# Development artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
 # Test files (should not be committed)
 **/test*.html
 **/test*.js
