@@ -141,6 +141,23 @@ cd backend
 pip install -r requirements.txt
 ```
 
+**2. JavaScript Errors (Uncaught SyntaxError)**
+```bash
+# Clear browser cache and refresh the page
+# Check browser developer console for specific errors
+# Ensure script.js loads properly
+```
+
+**3. "analyzeLog is not defined" Error**
+- This occurs when JavaScript fails to load due to syntax errors
+- Clear browser cache and reload the page
+- Check Network tab in developer tools to ensure script.js loads
+
+**4. Statistics showing "0 Issues Found" despite having results**
+- This was fixed in the latest version
+- The UI now properly counts issues and solutions from enhanced format
+- Refresh the application to see correct counts
+
 **2. Module Import Errors**
 ```bash
 # Ensure you're in the backend directory
