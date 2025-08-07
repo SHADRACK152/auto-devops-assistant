@@ -419,6 +419,19 @@ def get_learning_stats():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/simple-env-test')
+def simple_env_test():
+    """Ultra simple environment variable test without any dependencies"""
+    import os
+    return {
+        'raw_environ_count': len(os.environ),
+        'raw_environ_keys': list(os.environ.keys())[:50],  # First 50 keys
+        'groq_raw': os.environ.get('GROQ_API_KEY', 'MISSING'),
+        'tidb_host_raw': os.environ.get('TIDB_HOST', 'MISSING'),
+        'port_raw': os.environ.get('PORT', 'MISSING'),
+        'railway_env_raw': os.environ.get('RAILWAY_ENVIRONMENT', 'MISSING')
+    }
+
 @app.route('/api/debug-env', methods=['GET'])
 def debug_environment():
     """Debug endpoint to check environment variables"""
