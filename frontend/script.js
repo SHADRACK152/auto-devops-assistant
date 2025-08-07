@@ -260,7 +260,6 @@ function updateStats(data) {
         solutions: solutions.length 
     });
 }
-}
 
 function generateAnalysisHTML(data) {
     // Extract analysis data (backend returns it in different formats)
