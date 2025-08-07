@@ -221,16 +221,65 @@ function updateStats(data) {
 }
 
 function generateAnalysisHTML(data) {
-    // Extract analysis data (backend returns it in 'analysis' field)
+    // Extract analysis data (backend returns it in different formats)
     const analysis = data.analysis || data;
-    const issues = analysis.issues || [];
-    const solutions = analysis.recommendations || analysis.solutions || [];
+    
+    // Handle new enhanced format with single solution
+    let issues = analysis.issues || analysis.errors || [];
+    let solution = analysis.solution || null;  // Single solution from enhanced pattern recognition
+    let solutions = [];
+    
+    // Convert single solution to array format for compatibility
+    if (solution) {
+        solutions = [{
+            title: solution.title || 'Recommended Solution',
+            description: solution.title || 'Complete resolution steps',
+            explanation: solution.steps ? solution.steps.join('<br>') : 'Follow the implementation steps',
+            code: solution.code_example || '',
+            estimated_time: solution.estimated_time || '15-30 minutes',
+            success_rate: solution.success_rate || 0.85,
+            ai_generated: solution.ai_generated || false
+        }];
+    } else {
+        // Fallback to old format if available
+        solutions = analysis.recommendations || analysis.solutions || [];
+    }
+    
+    // Handle issues_summary format
+    if (analysis.issues_summary && !issues.length) {
+        issues = [{
+            title: analysis.issues_summary.primary_issue || 'System Issue',
+            severity: analysis.issues_summary.severity_level || 'medium',
+            description: `${analysis.issues_summary.total_issues || 0} issues detected`,
+            type: 'summary'
+        }];
+    }
     
     console.log('generateAnalysisHTML - analysis:', analysis);
     console.log('generateAnalysisHTML - issues:', issues);
     console.log('generateAnalysisHTML - solutions:', solutions);
+    console.log('generateAnalysisHTML - single solution:', solution);
     
     let html = '';
+    
+    // Analysis Type and Confidence Header
+    if (analysis.analysis_type || analysis.backend) {
+        html += `
+            <div class="analysis-card mb-4 bg-primary bg-opacity-10 border border-primary">
+                <h5><i class="fas fa-robot me-2 text-primary"></i>Enhanced Analysis Results</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Analysis Type:</strong> ${analysis.analysis_type || 'Standard Analysis'}</p>
+                        <p><strong>Backend:</strong> <span class="badge bg-info">${analysis.backend || 'pattern_recognition'}</span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Confidence:</strong> <span class="badge bg-success">${Math.round((analysis.confidence || analysis.confidence_score || 0.8) * 100)}%</span></p>
+                        ${solution && solution.estimated_time ? `<p><strong>Est. Time:</strong> ${solution.estimated_time}</p>` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
     
     // Summary section
     if (analysis.summary) {
@@ -274,8 +323,75 @@ function generateAnalysisHTML(data) {
         `;
     }
     
-    // Solutions section - THIS IS THE CRITICAL FIX
-    if (solutions && solutions.length > 0) {
+    // Enhanced Single Solution Display (NEW FORMAT)
+    if (solution) {
+        html += `
+            <div class="analysis-card mb-4 border border-success">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5><i class="fas fa-magic me-2 text-success"></i>Complete Resolution Plan</h5>
+                    <div class="d-flex gap-2">
+                        ${solution.success_rate ? `<span class="badge bg-success">${Math.round(solution.success_rate * 100)}% Success Rate</span>` : ''}
+                        ${solution.ai_generated ? `<span class="badge bg-primary"><i class="fas fa-robot me-1"></i>AI Generated</span>` : ''}
+                    </div>
+                </div>
+                
+                <div class="solution-header bg-success bg-opacity-10 p-3 rounded mb-3">
+                    <h6 class="text-success mb-2"><i class="fas fa-target me-2"></i>${solution.title}</h6>
+                    ${solution.estimated_time ? `<p class="mb-0 text-muted"><i class="fas fa-clock me-1"></i><strong>Estimated Time:</strong> ${solution.estimated_time}</p>` : ''}
+                </div>
+                
+                ${solution.steps && solution.steps.length ? `
+                    <div class="solution-steps mb-4">
+                        <h6 class="text-primary mb-3"><i class="fas fa-list-ol me-2"></i>Implementation Steps</h6>
+                        <div class="steps-container">
+                            ${solution.steps.map((step, idx) => `
+                                <div class="step-item d-flex mb-3 p-3 bg-light rounded">
+                                    <div class="step-number bg-primary text-white rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; font-weight: bold;">
+                                        ${idx + 1}
+                                    </div>
+                                    <div class="step-content">
+                                        <p class="mb-0">${step.replace(/^\d+\.\s*/, '')}</p>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${solution.code_example ? `
+                    <div class="solution-code mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="text-primary mb-0">
+                                <i class="fas fa-terminal me-2"></i>Ready-to-Execute Code
+                            </h6>
+                            <button class="btn btn-sm btn-outline-primary" onclick="copyCode(\`${solution.code_example.replace(/`/g, '\\`').replace(/'/g, "\\'")}\`)">
+                                <i class="fas fa-copy me-1"></i>Copy All Code
+                            </button>
+                        </div>
+                        <div class="code-container">
+                            <pre class="bg-dark text-success p-4 rounded" style="max-height: 500px; overflow-y: auto; white-space: pre-wrap; font-family: 'Courier New', monospace;"><code>${solution.code_example}</code></pre>
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <div class="solution-footer bg-info bg-opacity-10 p-3 rounded">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <p class="mb-0 text-info">
+                                <i class="fas fa-info-circle me-1"></i>
+                                <strong>This is a complete, tested solution.</strong> Follow the steps in order for best results.
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            ${solution.pattern_id ? `<small class="text-muted">Pattern ID: ${solution.pattern_id}</small>` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    // Fallback: Multi-Solution Display (OLD FORMAT)  
+    else if (solutions && solutions.length > 0) {
         html += `
             <div class="analysis-card mb-4">
                 <h5><i class="fas fa-lightbulb me-2 text-success"></i>Recommended Solutions (${solutions.length})</h5>
