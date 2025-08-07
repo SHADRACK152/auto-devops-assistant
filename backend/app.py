@@ -18,7 +18,26 @@ except FileNotFoundError:
 
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-from config import TIDB_CONFIG
+
+# Import config with fallback for Railway deployment
+try:
+    from config import TIDB_CONFIG
+    print("✅ Config imported successfully")
+except ImportError as e:
+    print(f"⚠️  Config import failed: {e}")
+    # Fallback config for Railway deployment using environment variables
+    TIDB_CONFIG = {
+        "host": os.getenv("TIDB_HOST", "gateway01.eu-central-1.prod.aws.tidbcloud.com"),
+        "port": int(os.getenv("TIDB_PORT", "4000")),
+        "user": os.getenv("TIDB_USER", "t5uTfqdrPKmAXCN.root"),
+        "password": os.getenv("TIDB_PASSWORD", "Nc6IzB7h26LPTi25"),
+        "database": os.getenv("TIDB_DATABASE", "test"),
+        "ssl_disabled": False,
+        "ssl_verify_cert": False,
+        "ssl_verify_identity": False,
+    }
+    print("✅ Using fallback config for Railway deployment")
+
 from sqlalchemy import create_engine, text
 from log_parser.parser import LogParser
 from ai_service import ai_analyzer

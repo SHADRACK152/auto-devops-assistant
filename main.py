@@ -6,16 +6,19 @@ import os
 print("🚀 Starting Auto DevOps Assistant for Railway deployment...")
 
 try:
-    # Add backend directory to path
-    backend_path = os.path.join(os.path.dirname(__file__), 'backend')
+    # Add both root and backend to Python path
+    root_path = os.path.dirname(__file__)
+    backend_path = os.path.join(root_path, 'backend')
+    
+    sys.path.insert(0, root_path)
     sys.path.insert(0, backend_path)
     
-    # Change to backend directory
-    os.chdir(backend_path)
-    print(f"✅ Working directory: {os.getcwd()}")
+    print(f"✅ Root directory: {root_path}")
+    print(f"✅ Backend directory: {backend_path}")
     
-    # Import and run the Flask app
-    from app import app
+    # Import the Flask app from backend
+    sys.path.append(backend_path)
+    from backend.app import app
     print("✅ Flask app imported successfully")
     
     if __name__ == '__main__':
@@ -24,7 +27,7 @@ try:
         
         # Run with production settings
         app.run(
-            host='0.0.0.0', 
+            host='0.0.0.0',
             port=port,
             debug=False,
             threaded=True
@@ -34,4 +37,17 @@ except Exception as e:
     print(f"❌ Failed to start app: {e}")
     import traceback
     traceback.print_exc()
-    sys.exit(1)
+    
+    # Try alternative import
+    try:
+        print("🔄 Trying alternative import method...")
+        os.chdir(os.path.join(os.path.dirname(__file__), 'backend'))
+        from app import app
+        print("✅ Alternative import successful")
+        
+        port = int(os.environ.get('PORT', 5000))
+        app.run(host='0.0.0.0', port=port, debug=False)
+        
+    except Exception as e2:
+        print(f"❌ Alternative import also failed: {e2}")
+        sys.exit(1)
