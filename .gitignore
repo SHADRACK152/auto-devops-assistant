@@ -16,6 +16,9 @@ ENV/
 
 # Configuration files with sensitive data
 backend/config.py
+.env.railway
+.env.local
+*.env.backup
 
 # IDEs
 .vscode/

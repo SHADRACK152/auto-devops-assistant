@@ -424,13 +424,20 @@ def debug_environment():
     """Debug endpoint to check environment variables"""
     try:
         groq_key = os.getenv("GROQ_API_KEY", "")
+        tidb_user = os.getenv("TIDB_USER", "")
+        tidb_password = os.getenv("TIDB_PASSWORD", "")
+        
         return jsonify({
             "groq_api_key_present": bool(groq_key),
             "groq_api_key_length": len(groq_key) if groq_key else 0,
             "groq_api_key_prefix": groq_key[:10] + "..." if groq_key else "NOT_SET",
-            "all_env_vars": [key for key in os.environ.keys() if 'groq' in key.lower() or 'api' in key.lower()],
+            "tidb_user_present": bool(tidb_user),
+            "tidb_password_present": bool(tidb_password),
+            "tidb_host": os.getenv("TIDB_HOST", "NOT_SET"),
+            "railway_environment": bool(os.getenv("RAILWAY_ENVIRONMENT")),
             "port": os.getenv("PORT", "5000"),
-            "flask_env": os.getenv("FLASK_ENV", "not_set")
+            "flask_env": os.getenv("FLASK_ENV", "not_set"),
+            "env_vars_count": len([k for k in os.environ.keys() if any(x in k.lower() for x in ['groq', 'tidb', 'api'])])
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500

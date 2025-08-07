@@ -9,7 +9,12 @@ restartPolicyType = "ON_FAILURE"
 [env]
 PORT = { default = "5000" }
 FLASK_ENV = { default = "production" }
-# GROQ_API_KEY should be set in Railway dashboard environment variables
+# Secure environment variables - SET THESE IN RAILWAY DASHBOARD:
+# GROQ_API_KEY = "your-groq-api-key"
+# TIDB_HOST = "gateway01.eu-central-1.prod.aws.tidbcloud.com"
+# TIDB_USER = "your-tidb-username"
+# TIDB_PASSWORD = "your-tidb-password"
+# TIDB_DATABASE = "test"
 
 [networking]
 externalPort = 5000

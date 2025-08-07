@@ -1,15 +1,14 @@
 import os
 
-# TiDB Serverless Configuration
-# Your actual TiDB Cloud connection details
+# TiDB Serverless Configuration - Using Environment Variables for Security
 TIDB_CONFIG = {
-    "host": "gateway01.eu-central-1.prod.aws.tidbcloud.com",
-    "port": 4000,
-    "user": "t5uTfqdrPKmAXCN.root",
-    "password": "Nc6IzB7h26LPTi25",
-    "database": "test",  # later
-    "ssl_disabled": False,  # Enable SSL for TiDB Serverless
-    "ssl_verify_cert": False,  # Skip certificate verification for simplicity
+    "host": os.getenv("TIDB_HOST", "gateway01.eu-central-1.prod.aws.tidbcloud.com"),
+    "port": int(os.getenv("TIDB_PORT", "4000")),
+    "user": os.getenv("TIDB_USER", ""),
+    "password": os.getenv("TIDB_PASSWORD", ""),
+    "database": os.getenv("TIDB_DATABASE", "test"),
+    "ssl_disabled": False,
+    "ssl_verify_cert": False,
     "ssl_verify_identity": False,
 }
 
