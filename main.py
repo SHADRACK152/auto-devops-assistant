@@ -1,9 +1,19 @@
-#!/usprint("🚀 Starting Auto DevOps Assistant for Railway deployment... v2.2")/bin/env python3
+#!/usr/bin/env python3
 # Railway entry point for Auto DevOps Assistant
 import sys
 import os
 
-print("🚀 Starting Auto DevOps Assistant for Railway deployment... v3.0")
+print("🚀 Starting Auto DevOps Assistant for Railway deployment... v3.1")
+
+# Debug environment variables immediately on startup
+print("🔍 Environment variable check:")
+print(f"   PORT: {os.getenv('PORT', 'NOT_SET')}")
+print(f"   RAILWAY_ENVIRONMENT: {os.getenv('RAILWAY_ENVIRONMENT', 'NOT_SET')}")
+groq_present = 'YES' if os.getenv('GROQ_API_KEY') else 'NO'
+tidb_present = 'YES' if os.getenv('TIDB_HOST') else 'NO'
+print(f"   GROQ_API_KEY present: {groq_present}")
+print(f"   TIDB_HOST present: {tidb_present}")
+print(f"   Total env vars: {len(os.environ)}")
 
 try:
     # Add both root and backend to Python path
