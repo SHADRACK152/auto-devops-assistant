@@ -71,9 +71,22 @@ log_parser = LogParser()
 
 @app.route('/')
 def index():
-    """Serve the frontend HTML at root"""
-    frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend')
-    return send_from_directory(frontend_path, 'index.html')
+    """Simple root endpoint for Railway deployment"""
+    return jsonify({
+        "message": "Auto DevOps Assistant API is running!",
+        "status": "online",
+        "version": "1.0.0",
+        "endpoints": ["/health", "/api/upload-log", "/api/analyze-ai", "/api/ai-status"]
+    })
+
+@app.route('/frontend')
+def serve_frontend():
+    """Serve the frontend HTML at /frontend"""
+    try:
+        frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend')
+        return send_from_directory(frontend_path, 'index.html')
+    except Exception:
+        return "Frontend not available in this deployment"
 
 @app.route('/<path:filename>')
 def serve_static_files(filename):
