@@ -419,6 +419,27 @@ def get_learning_stats():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/ai-debug')
+def ai_debug():
+    """Debug AI service initialization"""
+    try:
+        from online_ai_service import OnlineAIService
+        debug_service = OnlineAIService()
+        
+        groq_key_present = bool(debug_service.api_keys.get("groq", ""))
+        
+        return jsonify({
+            "groq_api_key_from_env": bool(os.getenv("GROQ_API_KEY")),
+            "groq_key_in_service": groq_key_present,
+            "groq_key_length": len(os.getenv("GROQ_API_KEY", "")),
+            "available_backends": debug_service.available_backends,
+            "active_backend": debug_service.active_backend,
+            "ai_analyzer_type": str(type(ai_analyzer)),
+            "ai_analyzer_online_available": hasattr(ai_analyzer, 'online_ai') and bool(ai_analyzer.online_ai.available_backends)
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
 @app.route('/api/simple-env-test')
 def simple_env_test():
     """Ultra simple environment variable test without any dependencies"""
