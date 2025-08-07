@@ -1,12 +1,9 @@
-# Auto DevOps Assistant - Railway Production Requirements
-# Minimal dependencies with flexible versioning
-
-Flask>=3.0.0
-flask-cors>=4.0.0
-python-dotenv>=1.0.0
-SQLAlchemy>=2.0.0
-PyMySQL>=1.1.0
-numpy>=1.24.0
-requests>=2.31.0
-openai>=1.12.0
-groq>=0.4.0
+Flask
+flask-cors
+python-dotenv
+SQLAlchemy
+PyMySQL
+numpy
+requests
+openai
+groq
