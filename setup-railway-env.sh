@@ -12,14 +12,14 @@ echo "   Add each variable below:"
 echo ""
 
 echo "🤖 AI Configuration:"
-echo "GROQ_API_KEY=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"
+echo "GROQ_API_KEY=your-groq-api-key-here"
 echo ""
 
 echo "🗄️  Database Configuration:"
-echo "TIDB_HOST=gateway01.eu-central-1.prod.aws.tidbcloud.com"
+echo "TIDB_HOST=your-tidb-host"
 echo "TIDB_PORT=4000"
-echo "TIDB_USER=t5uTfqdrPKmAXCN.root"
-echo "TIDB_PASSWORD=Nc6IzB7h26LPTi25"
+echo "TIDB_USER=your-tidb-username"
+echo "TIDB_PASSWORD=your-tidb-password"
 echo "TIDB_DATABASE=test"
 echo ""
 

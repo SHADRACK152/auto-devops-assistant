@@ -6,15 +6,15 @@ Set these in your Railway dashboard under **Variables** tab:
 
 ### 🤖 AI Configuration
 ```
-GROQ_API_KEY=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
+GROQ_API_KEY=your-groq-api-key-here
 ```
 
 ### 🗄️ Database Configuration
 ```
-TIDB_HOST=gateway01.eu-central-1.prod.aws.tidbcloud.com
+TIDB_HOST=your-tidb-host
 TIDB_PORT=4000
-TIDB_USER=t5uTfqdrPKmAXCN.root
-TIDB_PASSWORD=Nc6IzB7h26LPTi25
+TIDB_USER=your-tidb-username
+TIDB_PASSWORD=your-tidb-password
 TIDB_DATABASE=test
 ```
 
