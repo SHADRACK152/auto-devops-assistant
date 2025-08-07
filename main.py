@@ -3,7 +3,7 @@
 import sys
 import os
 
-print("🚀 Starting Auto DevOps Assistant for Railway deployment...")
+print("🚀 Starting Auto DevOps Assistant for Railway deployment... v2")
 
 try:
     # Add both root and backend to Python path
