@@ -96,6 +96,11 @@ def index():
         current_dir = os.getcwd()
         frontend_path = os.path.join(current_dir, 'frontend')
         
+        # Debug information
+        files_in_current_dir = os.listdir(current_dir) if os.path.exists(current_dir) else []
+        frontend_exists = os.path.exists(frontend_path)
+        frontend_files = os.listdir(frontend_path) if frontend_exists else []
+        
         # Check if frontend directory exists
         if not os.path.exists(frontend_path):
             # Fallback: try relative to this file
@@ -103,13 +108,19 @@ def index():
         
         return send_from_directory(frontend_path, 'index.html')
     except Exception as e:
-        # Fallback API response if frontend not available
+        # Detailed debug response
         return jsonify({
             "message": "Auto DevOps Assistant API is running!",
             "status": "online", 
             "version": "1.0.0",
-            "frontend_error": str(e),
-            "current_dir": os.getcwd(),
+            "debug": {
+                "current_dir": os.getcwd(),
+                "files_in_current_dir": files_in_current_dir[:10],  # Limit output
+                "frontend_path": frontend_path,
+                "frontend_exists": frontend_exists,
+                "frontend_files": frontend_files,
+                "error": str(e)
+            },
             "endpoints": ["/health", "/api/upload-log", "/api/analyze-ai", "/api/ai-status"]
         })
 
