@@ -33,8 +33,8 @@ check-status.bat
 .git/
 .github/
 
-# Frontend (deploy separately if needed)
-frontend/
+# Frontend files are needed for serving UI
+# frontend/
 
 # OS files
 .DS_Store
