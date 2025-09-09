@@ -1,9 +1,26 @@
-Flask
-flask-cors
-python-dotenv
-SQLAlchemy
-PyMySQL
-numpy
-requests
-openai
-groq
+# Auto DevOps Assistant - Production Requirements for Vercel
+# Core dependencies for serverless deployment
+
+Flask>=3.0.0
+flask-cors>=4.0.0
+python-dotenv>=1.0.0
+SQLAlchemy>=2.0.0
+PyMySQL>=1.1.0
+numpy>=1.24.0
+requests>=2.31.0
+openai>=1.12.0
+groq>=0.4.0
+
+# Essential Web Framework Dependencies
+Werkzeug==3.1.3
+Jinja2==3.1.6
+itsdangerous==2.2.0
+click==8.1.8
+MarkupSafe==3.0.2
+blinker==1.9.0
+
+# SSL/Security
+certifi==2025.7.14
+
+# Essential utilities
+urllib3==2.5.0
