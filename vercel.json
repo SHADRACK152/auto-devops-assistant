@@ -9,10 +9,5 @@
     { "src": "/", "dest": "/frontend/index.html" },
     { "src": "/(.*)\\.(js|css|png|jpg|jpeg|gif|svg|ico)", "dest": "/frontend/$1.$2" },
     { "src": "/(.*)", "dest": "/frontend/index.html" }
-  ],
-  "functions": {
-    "api/backend.py": {
-      "maxDuration": 30
-    }
-  }
+  ]
 }
