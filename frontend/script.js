@@ -455,8 +455,8 @@ function generateAnalysisHTML(data) {
         
         solutions.forEach((solution, index) => {
             // Handle different solution formats from the backend
-            let title = solution.title || solution.description || `Solution ${index + 1}`;
-            let description = solution.explanation || solution.description || 'Recommended fix';
+            let title = solution.title || `Solution ${index + 1}`;
+            let description = solution.description || solution.explanation || 'Recommended fix';
             let code = solution.code || '';
             
             // If solution has fixes array (complex format)
@@ -466,13 +466,38 @@ function generateAnalysisHTML(data) {
                 description = mainFix.explanation || description;
             }
             
+            // Format long descriptions properly - convert markdown-like text to HTML
+            let formattedDescription = description
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Bold text
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')              // Italic text
+                .replace(/`(.*?)`/g, '<code>$1</code>')            // Inline code
+                .replace(/\n\n/g, '</p><p>')                       // Paragraphs
+                .replace(/\n/g, '<br>')                            // Line breaks
+                .replace(/^/, '<p>')                               // Start paragraph
+                .replace(/$/, '</p>');                             // End paragraph
+            
             html += `
                 <div class="solution-item mb-4 p-3 bg-success bg-opacity-10 rounded border border-success">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <h6 class="text-success"><i class="fas fa-wrench me-2"></i>${title}</h6>
                         <span class="badge bg-success">Solution ${index + 1}</span>
                     </div>
-                    <p class="mb-3">${description}</p>
+                    <div class="solution-description mb-3" style="max-height: none; overflow: visible;">
+                        ${description.length > 500 ? `
+                            <div class="description-preview" id="desc-preview-${index}">
+                                ${formattedDescription.substring(0, 500)}...
+                                <button class="btn btn-link btn-sm p-0 ms-2" onclick="toggleDescription(${index})">
+                                    <i class="fas fa-chevron-down"></i> Show More
+                                </button>
+                            </div>
+                            <div class="description-full d-none" id="desc-full-${index}">
+                                ${formattedDescription}
+                                <button class="btn btn-link btn-sm p-0 ms-2" onclick="toggleDescription(${index})">
+                                    <i class="fas fa-chevron-up"></i> Show Less
+                                </button>
+                            </div>
+                        ` : formattedDescription}
+                    </div>
                     ${code ? `
                         <div class="code-block mt-3">
                             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -640,6 +665,24 @@ function copyCode(code) {
     }).catch(err => {
         showNotification('Failed to copy code', 'error');
     });
+}
+
+// Toggle description function for Show More/Show Less
+function toggleDescription(index) {
+    const preview = document.getElementById(`desc-preview-${index}`);
+    const full = document.getElementById(`desc-full-${index}`);
+    
+    if (preview && full) {
+        if (preview.classList.contains('d-none')) {
+            // Currently showing full, switch to preview
+            preview.classList.remove('d-none');
+            full.classList.add('d-none');
+        } else {
+            // Currently showing preview, switch to full
+            preview.classList.add('d-none');
+            full.classList.remove('d-none');
+        }
+    }
 }
 
 // Feedback functions for learning system
