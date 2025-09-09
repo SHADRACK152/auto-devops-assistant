@@ -48,37 +48,72 @@ CORS(app)  # Enable CORS for all routes
 
 # Create TiDB connection
 def create_db_connection():
-    try:
-        import ssl
-        
-        # Create SSL context (the working method from our test)
-        ssl_context = ssl.create_default_context()
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
-        
-        # Build connection URI for SQLAlchemy
-        uri = (f"mysql+pymysql://{TIDB_CONFIG['user']}:"
-               f"{TIDB_CONFIG['password']}@{TIDB_CONFIG['host']}:"
-               f"{TIDB_CONFIG['port']}/{TIDB_CONFIG['database']}")
-        
-        # SSL connection args for SQLAlchemy
-        connect_args = {
-            "ssl": ssl_context
-        }
-        
-        engine = create_engine(uri, connect_args=connect_args, 
-                             pool_timeout=30, pool_recycle=3600)
-        
-        # Test the connection
-        with engine.connect() as connection:
-            result = connection.execute(text("SELECT 1"))
-            print("✅ TiDB connection successful!")
-            
-        return engine
-    except Exception as e:
-        print(f"TiDB connection failed: {e}")
-        print("Using mock database for development...")
+    """Enhanced TiDB connection with multiple fallback options"""
+    
+    # Check if we have TiDB credentials
+    if not TIDB_CONFIG.get('user') or not TIDB_CONFIG.get('password'):
+        print("⚠️ TiDB credentials not configured - running without database")
         return None
+    
+    # Try different TiDB connection methods
+    connection_attempts = [
+        # Method 1: Standard format
+        {
+            "user": TIDB_CONFIG['user'],
+            "desc": "Standard TiDB format"
+        },
+        # Method 2: With cluster prefix (if missing)
+        {
+            "user": f"4QLyyGxux1m6Zws.{TIDB_CONFIG['user']}" if '.' not in TIDB_CONFIG['user'] else TIDB_CONFIG['user'],
+            "desc": "Cluster-prefixed format"
+        }
+    ]
+    
+    for attempt in connection_attempts:
+        try:
+            print(f"🔄 Trying TiDB connection: {attempt['desc']}")
+            
+            import ssl
+            
+            # Create SSL context
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            # Build connection URI
+            uri = (f"mysql+pymysql://{attempt['user']}:"
+                   f"{TIDB_CONFIG['password']}@{TIDB_CONFIG['host']}:"
+                   f"{TIDB_CONFIG['port']}/{TIDB_CONFIG['database']}")
+            
+            # SSL connection args
+            connect_args = {
+                "ssl": ssl_context,
+                "charset": "utf8mb4"
+            }
+            
+            engine = create_engine(
+                uri, 
+                connect_args=connect_args, 
+                pool_timeout=15, 
+                pool_recycle=1800,
+                pool_pre_ping=True
+            )
+            
+            # Test the connection
+            with engine.connect() as connection:
+                result = connection.execute(text("SELECT 1 as test"))
+                test_result = result.fetchone()
+                if test_result:
+                    print(f"✅ TiDB connection successful! ({attempt['desc']})")
+                    return engine
+                    
+        except Exception as e:
+            print(f"❌ TiDB connection failed ({attempt['desc']}): {str(e)[:100]}...")
+            continue
+    
+    print("⚠️ All TiDB connection attempts failed - running without database")
+    print("💡 Tip: Check your TiDB credentials or use the app without database features")
+    return None
 
 # Initialize database connection (TiDB only)
 engine = create_db_connection()
@@ -252,7 +287,7 @@ def upload_log():
 
 @app.route('/api/analyze-ai', methods=['POST'])
 def analyze_with_ai():
-    """Advanced AI-powered log analysis endpoint"""
+    """Advanced AI-powered log analysis endpoint - DIRECT GROQ AI"""
     try:
         data = request.get_json()
         
@@ -265,6 +300,8 @@ def analyze_with_ai():
         log_content = data['log_content']
         source = data.get('source', 'auto-detect')
         enable_ai = data.get('enable_ai', True)
+        
+        print(f"🚀 DIRECT GROQ ENDPOINT: Processing {len(log_content)} chars")
         
         if not enable_ai:
             # Run only pattern-based analysis
@@ -280,37 +317,97 @@ def analyze_with_ai():
                 }
             })
         
-        # Run full AI-powered analysis
+        # TRY DIRECT GROQ FIRST (bypass all initialization issues)
         try:
+            import sys
+            import os
+            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+            from groq_direct import analyze_with_groq_direct
+            print("🚀 Attempting direct Groq AI analysis...")
+            
+            groq_result = analyze_with_groq_direct(log_content, source)
+            
+            if groq_result:
+                print("✅ DIRECT GROQ SUCCESS!")
+                return jsonify({
+                    "message": "Direct Groq AI analysis completed successfully",
+                    "analysis": groq_result,
+                    "ai_powered": True,
+                    "confidence": groq_result.get('confidence_score', 0.95),
+                    "backend_used": "groq_ai_direct"
+                })
+            else:
+                print("⚠️ Direct Groq failed, trying fallback...")
+                
+        except Exception as groq_error:
+            print(f"❌ Direct Groq error: {groq_error}")
+        
+        # FALLBACK TO ORIGINAL AI ANALYZER
+        try:
+            print("🔄 Using original AI analyzer as backup...")
             ai_result = ai_analyzer.analyze_log(log_content, source)
             
             return jsonify({
-                "message": "AI-powered analysis completed successfully",
+                "message": "Analysis completed with backup method",
                 "analysis": ai_result,
                 "ai_powered": ai_result.get('ai_powered', False),
-                "confidence": ai_result.get('confidence_score', 0.0)
+                "confidence": ai_result.get('confidence_score', 0.0),
+                "backend_used": ai_result.get('backend', 'enhanced_patterns')
             })
             
         except Exception as ai_error:
-            # Graceful fallback to pattern analysis
-            print(f"AI analysis error: {ai_error}")
+            # Final fallback to basic pattern analysis
+            print(f"❌ All AI methods failed: {ai_error}")
             parsed_log = log_parser.parse_log(log_content, source)
             
             return jsonify({
-                "message": "Analysis completed with fallback method",
+                "message": "Analysis completed with basic pattern matching",
                 "analysis": {
                     "severity": parsed_log['severity'],
                     "summary": parsed_log['summary'],
                     "errors": parsed_log['errors'],
                     "ai_powered": False,
-                    "fallback_reason": str(ai_error),
-                    "analysis_type": "pattern_fallback"
+                    "analysis_type": "basic_patterns",
+                    "backend": "basic_fallback"
                 }
             })
             
     except Exception as e:
         return jsonify({
             "error": "Analysis failed",
+            "details": str(e)
+        }), 500
+
+
+@app.route('/api/debug-ai', methods=['GET'])
+def debug_ai_status():
+    """Debug endpoint to check AI configuration"""
+    try:
+        debug_info = {
+            "groq_api_key": "✅ Present" if os.getenv('GROQ_API_KEY') else "❌ Missing",
+            "ai_analyzer_type": type(ai_analyzer).__name__,
+            "online_ai_available": hasattr(ai_analyzer, 'online_ai'),
+        }
+        
+        if hasattr(ai_analyzer, 'online_ai'):
+            debug_info.update({
+                "available_backends": ai_analyzer.online_ai.available_backends,
+                "active_backend": ai_analyzer.online_ai.active_backend,
+                "api_keys_loaded": list(ai_analyzer.online_ai.api_keys.keys())
+            })
+            
+        return jsonify({
+            "message": "AI Debug Information",
+            "debug": debug_info,
+            "environment": {
+                "groq_key_length": len(os.getenv('GROQ_API_KEY', '')),
+                "env_vars": [k for k in os.environ.keys() if 'GROQ' in k or 'API' in k]
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "error": "Debug failed",
             "details": str(e)
         }), 500
 
@@ -653,3 +750,4 @@ if __name__ == '__main__':
     print(f"🌐 Environment: {os.environ.get('FLASK_ENV', 'development')}")
     
     app.run(debug=debug_mode, host='0.0.0.0', port=port)
+# Force reload 

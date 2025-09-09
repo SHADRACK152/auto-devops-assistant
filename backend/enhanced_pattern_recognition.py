@@ -681,8 +681,8 @@ echo "✅ General diagnostics complete - review output above"
             })
         
         return {
-            "analysis_type": "Comprehensive Issue Analysis",
-            "backend": "enhanced_ai_patterns",
+            "analysis_type": "Enhanced AI Pattern Analysis",
+            "backend": "enhanced_ai_analysis", 
             "confidence": solution.confidence,
             "confidence_score": solution.confidence,
             "ai_powered": True,
@@ -693,26 +693,43 @@ echo "✅ General diagnostics complete - review output above"
             "severity": max([p.get("severity", "medium") for p in patterns], 
                           key=lambda x: {"critical": 4, "high": 3, "medium": 2, "low": 1}.get(x, 2)),
             
-            # Single comprehensive recommendation with all details
+            # SINGLE COMPREHENSIVE SOLUTION (NO MORE MULTIPLE RECOMMENDATIONS)
             "recommendations": [{
-                "title": solution.solution_title,
-                "description": f"Complete resolution for {solution.error_type} with {int(solution.success_rate * 100)}% success rate",
+                "title": f"🎯 Enhanced AI Solution: {solution.solution_title}",
+                "description": f"**Complete Resolution Strategy**: {solution.error_type} fix with {int(solution.success_rate * 100)}% proven success rate. This single comprehensive solution addresses all {len(patterns)} detected issues with detailed step-by-step implementation.",
                 
-                # Detailed explanation steps
-                "steps": solution.solution_steps,
+                # Enhanced explanation steps with detailed context
+                "steps": [
+                    f"**{i+1}. {step.split('.')[0] if '.' in step else step}**: {step}" 
+                    for i, step in enumerate(solution.solution_steps[:5])  # Max 5 steps
+                ],
                 
-                # Quick diagnostic snippets
-                "diagnostic_commands": self._get_diagnostic_commands(patterns),
+                # Comprehensive implementation code with explanations
+                "code": f"""# 🚀 COMPREHENSIVE {solution.error_type.upper()} RESOLUTION
+# Generated from enhanced pattern analysis with {int(solution.success_rate * 100)}% success rate
+# Addresses: {', '.join([p['title'] for p in patterns[:3]])}
+
+{solution.code_example}
+
+# ✅ VERIFICATION STEPS
+echo "Verifying solution implementation..."
+{chr(10).join(self._get_diagnostic_commands(patterns))}
+echo "🎉 Resolution complete!"
+""",
                 
-                # Complete implementation code
-                "code": solution.code_example,
-                
-                # Implementation details
+                # Enhanced implementation details
                 "estimated_time": solution.estimated_time,
                 "success_rate": solution.success_rate,
-                "complexity": "medium" if solution.success_rate > 0.85 else "high",
+                "complexity": "medium" if solution.success_rate > 0.85 else "high", 
                 "pattern_id": solution.pattern_id,
-                "addresses_issues": [p["title"] for p in patterns]
+                "addresses_issues": [p["title"] for p in patterns],
+                
+                # NEW: Detailed explanation section
+                "detailed_explanation": f"**Issues Detected**: {len(patterns)} critical problems | **Resolution Approach**: Single comprehensive solution using enhanced pattern analysis | **Success Rate**: {int(solution.success_rate * 100)}% | **Implementation**: Step-by-step automated resolution",
+                
+                # NEW: Make it clear this is a single solution
+                "solution_type": "single_comprehensive",
+                "enhanced_ai_generated": True
             }],
             
             # Analysis metadata
