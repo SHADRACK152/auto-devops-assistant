@@ -90,39 +90,20 @@ log_parser = LogParser()
 
 @app.route('/')
 def index():
-    """Serve the frontend HTML at root"""
-    try:
-        # For Railway deployment, frontend is at ./frontend from project root
-        current_dir = os.getcwd()
-        frontend_path = os.path.join(current_dir, 'frontend')
-        
-        # Debug information
-        files_in_current_dir = os.listdir(current_dir) if os.path.exists(current_dir) else []
-        frontend_exists = os.path.exists(frontend_path)
-        frontend_files = os.listdir(frontend_path) if frontend_exists else []
-        
-        # Check if frontend directory exists
-        if not os.path.exists(frontend_path):
-            # Fallback: try relative to this file
-            frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend')
-        
-        return send_from_directory(frontend_path, 'index.html')
-    except Exception as e:
-        # Detailed debug response
-        return jsonify({
-            "message": "Auto DevOps Assistant API is running!",
-            "status": "online", 
-            "version": "1.0.0",
-            "debug": {
-                "current_dir": os.getcwd(),
-                "files_in_current_dir": files_in_current_dir[:10],  # Limit output
-                "frontend_path": frontend_path,
-                "frontend_exists": frontend_exists,
-                "frontend_files": frontend_files,
-                "error": str(e)
-            },
-            "endpoints": ["/health", "/api/upload-log", "/api/analyze-ai", "/api/ai-status"]
-        })
+    """API root endpoint - frontend is served separately by Vercel"""
+    return jsonify({
+        "message": "Auto DevOps Assistant API",
+        "status": "running",
+        "version": "2.0.0",
+        "deployment": "vercel",
+        "endpoints": [
+            "/health - Health check",
+            "/api/analyze - Log analysis",
+            "/api/analyze-ai - AI-powered analysis",
+            "/api/suggestions - Get suggestions",
+            "/api/fixes - Get fixes from database"
+        ]
+    })
 
 @app.route('/api')
 def api_info():
@@ -330,6 +311,39 @@ def analyze_with_ai():
     except Exception as e:
         return jsonify({
             "error": "Analysis failed",
+            "details": str(e)
+        }), 500
+
+
+@app.route('/api/analyze', methods=['POST'])
+def analyze_log_basic():
+    """Basic log analysis without AI - fallback endpoint"""
+    try:
+        data = request.get_json()
+        if not data or 'log_content' not in data:
+            return jsonify({"error": "Missing log_content in request"}), 400
+            
+        log_content = data['log_content']
+        source = data.get('source', 'unknown')
+        
+        # Use basic pattern matching analysis
+        log_parser = LogParser()
+        parsed_log = log_parser.parse_log(log_content, source)
+        
+        return jsonify({
+            "message": "Basic analysis completed",
+            "analysis": {
+                "severity": parsed_log['severity'],
+                "summary": parsed_log['summary'],
+                "errors": parsed_log['errors'],
+                "ai_powered": False,
+                "analysis_type": "pattern_matching"
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "error": "Basic analysis failed",
             "details": str(e)
         }), 500
 

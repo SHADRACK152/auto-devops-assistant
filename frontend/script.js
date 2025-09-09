@@ -1,6 +1,7 @@
 // Auto DevOps Assistant Frontend JavaScript - Clean Version
 
-const API_BASE_URL = 'https://auto-devops-assistant-production.up.railway.app';
+// Use relative URLs for Vercel deployment - will use same domain as frontend
+const API_BASE_URL = '';
 
 // Store current analysis for feedback
 let currentAnalysis = null;
